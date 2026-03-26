@@ -255,13 +255,168 @@ function Inicio({ user, proyecto, registros, online, pendientes, onNav, onVerPro
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PROYECTOS — pantalla separada
+// DETALLE PROYECTO — registros + info + nuevo registro
 // ═══════════════════════════════════════════════════════════════
-function Proyectos({ proyectos, proyectoActivo, onCambiarActivo, onActualizar, onVolver }) {
-  const [editando,setEditando]=useState(null);
-  const [form,setForm]=useState({});
-  const abrirEditor=p=>{ setEditando(p.id); setForm({nombre:p.nombre,cliente:p.cliente,campaña:p.campaña}); };
-  const guardar=()=>{ if(!form.nombre.trim()) return; onActualizar(editando,form); setEditando(null); };
+function DetalleProyecto({ proyecto, proyectoActivo, registros, onCambiarActivo, onActualizar, onNuevoRegistro, onVolver }) {
+  const [vista,setVista]=useState("registros"); // "registros" | "editar"
+  const [form,setForm]=useState({nombre:proyecto.nombre,cliente:proyecto.cliente,campaña:proyecto.campaña});
+  const [expandido,setExpandido]=useState(null);
+  const [filtro,setFiltro]=useState("todos");
+
+  const regs=registros.filter(r=>r.proyectoId===proyecto.id);
+  const alertas=regs.filter(r=>r.alerta).length;
+  const tipos=[...new Set(regs.map(r=>r.tipo))];
+  const filtrados=regs.filter(r=>filtro==="todos"||r.tipo===filtro);
+
+  const guardarEdicion=()=>{ if(!form.nombre.trim()) return; onActualizar(proyecto.id,form); setVista("registros"); };
+
+  return (
+    <div style={{ flex:1,overflowY:"auto",background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
+      {/* HEADER */}
+      <div style={{ padding:"14px 18px 12px",borderBottom:"1px solid rgba(45,106,79,0.1)",position:"sticky",top:0,background:"rgba(240,250,244,0.96)",backdropFilter:"blur(12px)",zIndex:10 }}>
+        <button onClick={onVolver} style={{ color:"#52b788",fontFamily:"system-ui",fontSize:12,background:"none",border:"none",cursor:"pointer",padding:0,marginBottom:8 }}>‹ Proyectos</button>
+        <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:10 }}>
+          <div style={{ width:44,height:44,borderRadius:13,background:proyecto.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0 }}>⛏</div>
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+              <p style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:18,fontWeight:400,margin:0 }}>{proyecto.nombre}</p>
+              {proyecto.id===proyectoActivo.id&&<span style={{ background:"#d8f3dc",color:"#2d6a4f",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:8 }}>✓ Activo</span>}
+            </div>
+            <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:11,margin:0 }}>{proyecto.cliente} · {proyecto.campaña}</p>
+          </div>
+        </div>
+        {/* Estadísticas rápidas */}
+        <div style={{ display:"flex",gap:8,marginBottom:10 }}>
+          <div style={{ flex:1,background:"white",borderRadius:12,padding:"8px 10px",textAlign:"center",border:"1px solid rgba(45,106,79,0.08)" }}>
+            <p style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,margin:0 }}>{regs.length}</p>
+            <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:9,margin:0 }}>Registros</p>
+          </div>
+          <div style={{ flex:1,background:alertas>0?"#fde8e8":"white",borderRadius:12,padding:"8px 10px",textAlign:"center",border:`1px solid ${alertas>0?"rgba(192,57,43,0.15)":"rgba(45,106,79,0.08)"}` }}>
+            <p style={{ color:alertas>0?"#c0392b":"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,margin:0 }}>{alertas}</p>
+            <p style={{ color:alertas>0?"#c0392b":"#74c69d",fontFamily:"system-ui",fontSize:9,margin:0 }}>Alertas</p>
+          </div>
+          <div style={{ flex:1,background:"white",borderRadius:12,padding:"8px 10px",textAlign:"center",border:"1px solid rgba(45,106,79,0.08)" }}>
+            <p style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,margin:0 }}>{tipos.length}</p>
+            <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:9,margin:0 }}>Tipos</p>
+          </div>
+        </div>
+        {/* Botones de acción */}
+        <div style={{ display:"flex",gap:8 }}>
+          <button onClick={()=>onNuevoRegistro(proyecto)} style={{ flex:2,background:"linear-gradient(135deg,#1b4332,#2d6a4f)",border:"none",borderRadius:12,padding:"10px",color:"white",fontFamily:"system-ui",fontWeight:700,fontSize:12,cursor:"pointer" }}>+ Nuevo registro</button>
+          {proyecto.id!==proyectoActivo.id&&(
+            <button onClick={()=>onCambiarActivo(proyecto)} style={{ flex:1,background:"#d8f3dc",border:"none",borderRadius:12,padding:"10px",color:"#2d6a4f",fontFamily:"system-ui",fontWeight:700,fontSize:12,cursor:"pointer" }}>✓ Activar</button>
+          )}
+          <button onClick={()=>setVista(v=>v==="editar"?"registros":"editar")} style={{ flex:1,background:"rgba(45,106,79,0.08)",border:"1px solid rgba(45,106,79,0.15)",borderRadius:12,padding:"10px",color:"#52b788",fontFamily:"system-ui",fontWeight:600,fontSize:12,cursor:"pointer" }}>✏ Editar</button>
+        </div>
+      </div>
+
+      <div style={{ padding:"12px 16px",display:"flex",flexDirection:"column",gap:10 }}>
+        {/* FORMULARIO DE EDICIÓN */}
+        {vista==="editar"&&(
+          <div style={{ background:"white",border:"1.5px solid rgba(45,106,79,0.2)",borderRadius:18,padding:"16px",boxShadow:"0 4px 16px rgba(27,67,50,0.08)" }}>
+            <p style={{ color:"#52b788",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.15em",margin:"0 0 12px" }}>EDITANDO PROYECTO</p>
+            {[["NOMBRE","nombre","Ej: Mina Los Andes"],["CLIENTE","cliente","Ej: Minera Patagónica S.A."],["CAMPAÑA","campaña","Ej: Q1 2026"]].map(([lbl,key,ph])=>(
+              <div key={key} style={{ marginBottom:10 }}>
+                <p style={{ color:"#2d6a4f",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.1em",margin:"0 0 5px" }}>{lbl}</p>
+                <input value={form[key]||""} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))} placeholder={ph}
+                  style={{ width:"100%",background:"#f0faf4",border:`1.5px solid ${form[key]?"rgba(45,106,79,0.3)":"rgba(45,106,79,0.15)"}`,borderRadius:12,padding:"10px 14px",fontFamily:"system-ui",fontSize:14,outline:"none",boxSizing:"border-box",color:"#1a1a1a" }}/>
+              </div>
+            ))}
+            <div style={{ display:"flex",gap:8,marginTop:4 }}>
+              <button onClick={()=>setVista("registros")} style={{ flex:1,background:"#f0faf4",border:"1.5px solid rgba(45,106,79,0.2)",borderRadius:12,padding:"11px",color:"#52b788",fontFamily:"system-ui",fontWeight:600,fontSize:13,cursor:"pointer" }}>Cancelar</button>
+              <button onClick={guardarEdicion} style={{ flex:2,background:"linear-gradient(135deg,#1b4332,#2d6a4f)",border:"none",borderRadius:12,padding:"11px",color:"white",fontFamily:"system-ui",fontWeight:700,fontSize:13,cursor:"pointer" }}>✓ Guardar cambios</button>
+            </div>
+          </div>
+        )}
+
+        {/* FILTROS DE TIPO */}
+        {vista==="registros"&&regs.length>0&&(
+          <div style={{ display:"flex",gap:6,overflowX:"auto",paddingBottom:2 }}>
+            {[["todos","Todos"],...Object.entries(TIPO_CFG).filter(([k])=>tipos.includes(k)).map(([k,v])=>[k,`${v.icon} ${v.label.split(" ")[0]}`])].map(([id,lbl])=>(
+              <button key={id} onClick={()=>setFiltro(id)} style={{ padding:"5px 12px",borderRadius:20,border:"none",cursor:"pointer",background:filtro===id?"#2d6a4f":"rgba(45,106,79,0.08)",color:filtro===id?"white":"#52b788",fontFamily:"system-ui",fontSize:11,fontWeight:600,flexShrink:0 }}>{lbl}</button>
+            ))}
+          </div>
+        )}
+
+        {/* LISTA DE REGISTROS */}
+        {vista==="registros"&&(
+          filtrados.length===0
+            ? <div style={{ textAlign:"center",padding:"40px 0" }}><div style={{ fontSize:40,marginBottom:10 }}>📋</div><p style={{ color:"#b7e4c7",fontFamily:"system-ui",fontSize:13 }}>Sin registros todavía</p><p style={{ color:"#ccc",fontFamily:"system-ui",fontSize:11 }}>Tocá "+ Nuevo registro" para empezar</p></div>
+            : filtrados.map(r=>{
+                const cfg=TIPO_CFG[r.tipo];
+                const abierto=expandido===r.id;
+                const campos=CAMPOS[r.tipo]||[];
+                return (
+                  <div key={r.id} style={{ background:"white",border:`1.5px solid ${abierto?cfg.color+"55":cfg.bg}`,borderRadius:16,overflow:"hidden",boxShadow:abierto?"0 4px 16px rgba(27,67,50,0.10)":"0 2px 8px rgba(27,67,50,0.05)",transition:"box-shadow 0.2s" }}>
+                    <button onClick={()=>setExpandido(abierto?null:r.id)} style={{ width:"100%",background:"none",border:"none",cursor:"pointer",padding:"12px 14px",textAlign:"left" }}>
+                      <div style={{ display:"flex",alignItems:"flex-start",gap:10 }}>
+                        <div style={{ width:36,height:36,borderRadius:10,background:cfg.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0 }}>{cfg.icon}</div>
+                        <div style={{ flex:1 }}>
+                          <div style={{ display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3 }}>
+                            <span style={{ background:cfg.bg,color:cfg.color,fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>{cfg.label}</span>
+                            {r.alerta&&<span style={{ background:"#fde8e8",color:"#c0392b",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>🚨 Alerta</span>}
+                            <span style={{ color:"#ccc",fontFamily:"system-ui",fontSize:10 }}>· {r.timestamp}</span>
+                          </div>
+                          <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:"0 0 2px",fontWeight:500 }}>{r.valores?.comunidad||r.valores?.punto||"Sin detalle"}</p>
+                          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                            <span style={{ color:"#aaa",fontFamily:"system-ui",fontSize:10 }}>👤 {r.operador}</span>
+                            <span style={{ color:cfg.color,fontSize:14,transition:"transform 0.2s",display:"inline-block",transform:abierto?"rotate(90deg)":"rotate(0deg)" }}>›</span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                    {abierto&&(
+                      <div style={{ borderTop:`1px solid ${cfg.bg}`,padding:"12px 14px",display:"flex",flexDirection:"column",gap:8 }}>
+                        <div style={{ background:cfg.bg,borderRadius:10,padding:"8px 12px" }}>
+                          <p style={{ color:cfg.color,fontFamily:"system-ui",fontSize:10,fontWeight:700,margin:"0 0 1px",letterSpacing:"0.1em" }}>📅 FECHA Y HORA</p>
+                          <p style={{ color:cfg.color,fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:15,margin:0 }}>{r.timestamp}</p>
+                        </div>
+                        <div style={{ background:"#f8f8f8",borderRadius:10,padding:"8px 12px" }}>
+                          <p style={{ color:"#666",fontFamily:"system-ui",fontSize:10,fontWeight:700,margin:"0 0 1px",letterSpacing:"0.1em" }}>👤 OPERADOR</p>
+                          <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:0,fontWeight:500 }}>{r.operador}</p>
+                        </div>
+                        {campos.filter(c=>r.valores?.[c.id]).map(c=>{
+                          const est=c.nk?checkAlerta(r.tipo,c.nk,r.valores[c.id]):null;
+                          const norm=NORMATIVA[r.tipo]?.[c.nk];
+                          return (
+                            <div key={c.id} style={{ background:est==="critico"?"#fde8e8":est==="alerta"?"#fef3cd":"#fafafa",border:`1px solid ${est==="critico"?"rgba(192,57,43,0.2)":est==="alerta"?"rgba(230,168,23,0.2)":"rgba(0,0,0,0.06)"}`,borderRadius:10,padding:"8px 12px" }}>
+                              <p style={{ color:est==="critico"?"#c0392b":est==="alerta"?"#b7860a":"#888",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.1em",margin:"0 0 2px" }}>{c.label.toUpperCase()}</p>
+                              <p style={{ color:est==="critico"?"#c0392b":"#1a1a1a",fontFamily:"system-ui",fontSize:14,margin:0,fontWeight:est?"700":"400" }}>{r.valores[c.id]}</p>
+                              {est==="critico"&&norm&&<p style={{ color:"#c0392b",fontFamily:"system-ui",fontSize:9,margin:"3px 0 0",fontWeight:700 }}>🔴 Fuera de norma · {norm.norma}</p>}
+                              {est==="alerta"&&norm&&<p style={{ color:"#b7860a",fontFamily:"system-ui",fontSize:9,margin:"3px 0 0",fontWeight:700 }}>🟡 Cerca del límite · {norm.norma}</p>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+        )}
+        <div style={{ height:16 }}/>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROYECTOS — lista para entrar al detalle
+// ═══════════════════════════════════════════════════════════════
+function Proyectos({ proyectos, proyectoActivo, registros, onCambiarActivo, onActualizar, onNuevoRegistro, onVolver }) {
+  const [detalle,setDetalle]=useState(null);
+
+  if(detalle) return (
+    <DetalleProyecto
+      proyecto={detalle}
+      proyectoActivo={proyectoActivo}
+      registros={registros}
+      onCambiarActivo={p=>{ onCambiarActivo(p); setDetalle({...detalle,...p}); }}
+      onActualizar={(id,cambios)=>{ onActualizar(id,cambios); setDetalle(d=>({...d,...cambios})); }}
+      onNuevoRegistro={onNuevoRegistro}
+      onVolver={()=>setDetalle(null)}
+    />
+  );
+
   return (
     <div style={{ flex:1,overflowY:"auto",background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
       <div style={{ padding:"14px 18px 12px",borderBottom:"1px solid rgba(45,106,79,0.1)",position:"sticky",top:0,background:"rgba(240,250,244,0.96)",backdropFilter:"blur(12px)",zIndex:10 }}>
@@ -270,48 +425,32 @@ function Proyectos({ proyectos, proyectoActivo, onCambiarActivo, onActualizar, o
         <h2 style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:400,margin:0 }}>
           <span style={{ fontStyle:"italic",color:"#2d6a4f" }}>Proyectos</span>
         </h2>
-        <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:11,margin:"4px 0 0" }}>Seleccioná el activo o editá los datos</p>
+        <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:11,margin:"4px 0 0" }}>Tocá un proyecto para ver sus registros</p>
       </div>
       <div style={{ padding:"14px 16px",display:"flex",flexDirection:"column",gap:10 }}>
-        {proyectos.map(p=>(
-          <div key={p.id}>
-            {editando===p.id?(
-              <div style={{ background:"white",border:"1.5px solid rgba(45,106,79,0.2)",borderRadius:20,padding:"16px",boxShadow:"0 4px 16px rgba(27,67,50,0.1)" }}>
-                <p style={{ color:"#52b788",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.15em",margin:"0 0 12px" }}>EDITANDO PROYECTO</p>
-                {[["NOMBRE","nombre","Ej: Mina Los Andes"],["CLIENTE","cliente","Ej: Minera Patagónica S.A."],["CAMPAÑA","campaña","Ej: Q1 2026"]].map(([lbl,key,ph])=>(
-                  <div key={key} style={{ marginBottom:10 }}>
-                    <p style={{ color:"#2d6a4f",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.1em",margin:"0 0 5px" }}>{lbl}</p>
-                    <input value={form[key]||""} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))} placeholder={ph}
-                      style={{ width:"100%",background:"#f0faf4",border:`1.5px solid ${form[key]?"rgba(45,106,79,0.3)":"rgba(45,106,79,0.15)"}`,borderRadius:12,padding:"10px 14px",fontFamily:"system-ui",fontSize:14,outline:"none",boxSizing:"border-box",color:"#1a1a1a" }}/>
+        {proyectos.map(p=>{
+          const regsP=registros.filter(r=>r.proyectoId===p.id);
+          const alertasP=regsP.filter(r=>r.alerta).length;
+          return (
+            <button key={p.id} onClick={()=>setDetalle(p)} style={{ background:"white",border:`2px solid ${p.id===proyectoActivo.id?"rgba(45,106,79,0.4)":"rgba(45,106,79,0.1)"}`,borderRadius:20,padding:"16px",boxShadow:`0 4px 16px ${p.id===proyectoActivo.id?"rgba(27,67,50,0.12)":"rgba(27,67,50,0.05)"}`,cursor:"pointer",textAlign:"left",width:"100%" }}>
+              <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+                <div style={{ width:46,height:46,borderRadius:14,background:p.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:22 }}>⛏</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap" }}>
+                    <p style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:16,fontWeight:400,margin:0 }}>{p.nombre}</p>
+                    {p.id===proyectoActivo.id&&<span style={{ background:"#d8f3dc",color:"#2d6a4f",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:8 }}>✓ Activo</span>}
                   </div>
-                ))}
-                <div style={{ display:"flex",gap:8,marginTop:4 }}>
-                  <button onClick={()=>setEditando(null)} style={{ flex:1,background:"#f0faf4",border:"1.5px solid rgba(45,106,79,0.2)",borderRadius:12,padding:"11px",color:"#52b788",fontFamily:"system-ui",fontWeight:600,fontSize:13,cursor:"pointer" }}>Cancelar</button>
-                  <button onClick={guardar} style={{ flex:2,background:"linear-gradient(135deg,#1b4332,#2d6a4f)",border:"none",borderRadius:12,padding:"11px",color:"white",fontFamily:"system-ui",fontWeight:700,fontSize:13,cursor:"pointer" }}>✓ Guardar cambios</button>
-                </div>
-              </div>
-            ):(
-              <div style={{ background:"white",border:`2px solid ${p.id===proyectoActivo.id?"rgba(45,106,79,0.4)":"rgba(45,106,79,0.1)"}`,borderRadius:20,padding:"16px",boxShadow:`0 4px 16px ${p.id===proyectoActivo.id?"rgba(27,67,50,0.12)":"rgba(27,67,50,0.05)"}` }}>
-                <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:10 }}>
-                  <div style={{ width:46,height:46,borderRadius:14,background:p.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:22 }}>⛏</div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ display:"flex",alignItems:"center",gap:6,marginBottom:2 }}>
-                      <p style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:16,fontWeight:400,margin:0 }}>{p.nombre}</p>
-                      {p.id===proyectoActivo.id&&<span style={{ background:"#d8f3dc",color:"#2d6a4f",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:8 }}>✓ Activo</span>}
-                    </div>
-                    <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:11,margin:0 }}>{p.cliente} · {p.campaña}</p>
+                  <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:11,margin:"0 0 8px" }}>{p.cliente} · {p.campaña}</p>
+                  <div style={{ display:"flex",gap:10,alignItems:"center" }}>
+                    <span style={{ color:"#52b788",fontFamily:"system-ui",fontSize:11 }}>📋 {regsP.length} registro{regsP.length!==1?"s":""}</span>
+                    {alertasP>0&&<span style={{ color:"#c0392b",fontFamily:"system-ui",fontSize:11,fontWeight:700 }}>🚨 {alertasP} alerta{alertasP!==1?"s":""}</span>}
+                    <span style={{ color:"#ccc",fontFamily:"system-ui",fontSize:18,marginLeft:"auto" }}>›</span>
                   </div>
                 </div>
-                <div style={{ display:"flex",gap:8 }}>
-                  {p.id!==proyectoActivo.id&&(
-                    <button onClick={()=>{ onCambiarActivo(p); onVolver(); }} style={{ flex:1,background:"#d8f3dc",border:"none",borderRadius:11,padding:"10px",color:"#2d6a4f",fontFamily:"system-ui",fontWeight:700,fontSize:12,cursor:"pointer" }}>✓ Seleccionar</button>
-                  )}
-                  <button onClick={()=>abrirEditor(p)} style={{ flex:1,background:"rgba(45,106,79,0.08)",border:"1px solid rgba(45,106,79,0.15)",borderRadius:11,padding:"10px",color:"#52b788",fontFamily:"system-ui",fontWeight:600,fontSize:12,cursor:"pointer" }}>✏ Editar</button>
-                </div>
               </div>
-            )}
-          </div>
-        ))}
+            </button>
+          );
+        })}
         <div style={{ height:16 }}/>
       </div>
     </div>
@@ -635,7 +774,7 @@ export default function App() {
   const renderContent=()=>{
     if(screen==="login") return <Login onLogin={u=>{ setUser(u); setScreen("app"); setTab("inicio"); }}/>;
     if(screen!=="app") return null;
-    if(tab==="proyectos") return <Proyectos proyectos={proyectos} proyectoActivo={proyecto} onCambiarActivo={cambiarActivo} onActualizar={actualizarProyecto} onVolver={()=>setTab("inicio")}/>;
+    if(tab==="proyectos") return <Proyectos proyectos={proyectos} proyectoActivo={proyecto} registros={registros} onCambiarActivo={cambiarActivo} onActualizar={actualizarProyecto} onNuevoRegistro={p=>{ cambiarActivo(p); setTipoForm(null); setTab("inicio"); }} onVolver={()=>setTab("inicio")}/>;
     if(tab==="form"&&tipoForm) return <Formulario tipo={tipoForm} proyecto={proyecto} user={user} onGuardar={r=>addRegistro(r)} onBack={()=>{ setTipoForm(null); setTab("inicio"); }}/>;
     if(tab==="historial") return <Historial registros={registros} proyecto={proyecto}/>;
     if(tab==="qr") return <QRCliente proyectos={proyectos}/>;
