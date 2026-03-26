@@ -1,780 +1,642 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
-// ─── LOGO SVG ───────────────────────────────────────────────────────────────
-function AndinaLogo({ size = "md", showText = true }) {
-  const s = size === "xl" ? 80 : size === "lg" ? 56 : size === "md" ? 40 : 28;
+// ═══════════════════════════════════════════════════════════════
+// LOGO ANDINA — tres montañas misma base, central más alta
+// ═══════════════════════════════════════════════════════════════
+function AndinaLogo({ size = "md", light = false, showSubtitle = true }) {
+  const sizes = {
+    sm:  { w: 80,  h: 58,  sp: 2,  name: 12, sub: 5   },
+    md:  { w: 130, h: 94,  sp: 3,  name: 19, sub: 6.5  },
+    lg:  { w: 200, h: 144, sp: 4,  name: 28, sub: 8.5  },
+    xl:  { w: 300, h: 216, sp: 6,  name: 42, sub: 11   },
+  };
+  const s = sizes[size];
+  const cx = s.w / 2;
+  const base  = s.h * 0.46;
+  const hLat  = base * 0.44;
+  const hCen  = base * 0.60;
+  const mW = s.w * 0.60; const mL = cx - mW/2; const mR = cx + mW/2;
+  const unit = mW / 5;
+  const l1x=mL; const l1x2=mL+unit*2; const l1cx=(l1x+l1x2)/2;
+  const m1x=mL+unit; const m1x2=mR-unit;
+  const r1x=mR-unit*2; const r1x2=mR; const r1cx=(r1x+r1x2)/2;
+  const v1=light?"#2d6a4f":"#52b788"; const v2=light?"#40916c":"#74c69d";
+  const tc=light?"#1b4332":"white"; const sc=light?"#2d6a4f":"#95d5b2";
+  const nameY=base+s.name*1.55; const lineY=nameY+s.name*0.32; const subY=lineY+s.sub*2.0;
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: s * 0.12 }}>
-      <svg viewBox="0 0 100 70" fill="none" style={{ width: s, height: s * 0.7 }}>
-        <polygon points="50,5 68,42 32,42" fill="#52b788" />
-        <polygon points="22,20 38,50 6,50" fill="#2d6a4f" />
-        <polygon points="78,20 94,50 62,50" fill="#2d6a4f" />
-        <rect x="4" y="52" width="92" height="3" rx="1.5" fill="#52b788" opacity="0.35" />
-      </svg>
-      {showText && (
-        <div style={{ textAlign: "center", lineHeight: 1 }}>
-          <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: s * 0.38, fontWeight: 400, letterSpacing: "0.18em", color: "white" }}>
-            ANDINA
-          </div>
-          {size !== "sm" && (
-            <div style={{ fontFamily: "'Montserrat', system-ui, sans-serif", fontSize: s * 0.14, fontWeight: 300, letterSpacing: "0.22em", color: "rgba(255,255,255,0.55)", marginTop: 2, textTransform: "uppercase" }}>
-              Consultora Socioambiental
+    <svg width={s.w} height={s.h} viewBox={`0 0 ${s.w} ${s.h}`} style={{ display:"block" }}>
+      <defs><style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400&family=Montserrat:wght@300&display=swap');`}</style></defs>
+      <polygon points={`${l1x},${base} ${l1cx},${base-hLat} ${l1x2},${base}`} fill={v1} opacity="0.82"/>
+      <polygon points={`${m1x},${base} ${cx},${base-hCen} ${m1x2},${base}`} fill={v2}/>
+      <polygon points={`${r1x},${base} ${r1cx},${base-hLat} ${r1x2},${base}`} fill={v1} opacity="0.82"/>
+      <line x1={mL-4} y1={base} x2={mR+4} y2={base} stroke="#52b788" strokeWidth="0.8" opacity="0.3"/>
+      <text x={cx} y={nameY} textAnchor="middle" fontFamily="'Cormorant Garamond',Georgia,serif" fontSize={s.name} fontWeight="400" fill={tc} letterSpacing={s.sp}>ANDINA</text>
+      <line x1={cx-s.w*0.20} y1={lineY} x2={cx+s.w*0.20} y2={lineY} stroke="#52b788" strokeWidth="0.7" opacity="0.45"/>
+      {showSubtitle&&<text x={cx} y={subY} textAnchor="middle" fontFamily="'Montserrat',system-ui,sans-serif" fontSize={s.sub} fontWeight="300" fill={sc} letterSpacing={s.sp*0.75}>CONSULTORA SOCIOAMBIENTAL</text>}
+    </svg>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PERSISTENCIA localStorage
+// ═══════════════════════════════════════════════════════════════
+function save(key, data) { try { localStorage.setItem(`andina_${key}`, JSON.stringify(data)); } catch(e) {} }
+function load(key, def)  { try { const v=localStorage.getItem(`andina_${key}`); return v?JSON.parse(v):def; } catch(e) { return def; } }
+
+// ═══════════════════════════════════════════════════════════════
+// DATOS
+// ═══════════════════════════════════════════════════════════════
+const USUARIOS = [
+  { id:1, nombre:"Gonzalo", apellido:"R.", rol:"Admin",    avatar:"G", pass:"1234" },
+  { id:2, nombre:"Carlos",  apellido:"M.", rol:"Operador", avatar:"C", pass:"1234" },
+  { id:3, nombre:"Laura",   apellido:"V.", rol:"Operador", avatar:"L", pass:"1234" },
+];
+const PROYECTOS_DEF = [
+  { id:1, nombre:"Mina Los Andes",      cliente:"Minera Patagónica S.A.", campaña:"Q1 2026",    color:"#1b4332" },
+  { id:2, nombre:"Proyecto Río Blanco", cliente:"Cerro Mining Corp.",     campaña:"Marzo 2026", color:"#1e6091" },
+  { id:3, nombre:"EIA Cerro Negro",     cliente:"Andina Recursos",        campaña:"Q1 2026",    color:"#5c4a1e" },
+];
+const TIPO_CFG = {
+  encuesta: { icon:"📋", label:"Encuesta Social",   color:"#1b4332", bg:"#d8f3dc" },
+  censo:    { icon:"🏘", label:"Censo Comunitario", color:"#2d4a8a", bg:"#dce8ff" },
+  agua:     { icon:"💧", label:"Monitoreo Agua",    color:"#1e6091", bg:"#d0e8f5" },
+  aire:     { icon:"💨", label:"Monitoreo Aire",    color:"#5c4a1e", bg:"#f5ead0" },
+  suelo:    { icon:"🌱", label:"Monitoreo Suelo",   color:"#4a2c0a", bg:"#f0dfc8" },
+};
+const NORMATIVA = {
+  agua:  { ph:{min:6.5,max:8.5,norma:"Ley 25.688 Art. 6°"}, turbidez:{max:5,norma:"CAA Art. 982"}, oxigeno:{min:6,norma:"Res. SAyDS 97/2001"}, conductividad:{max:1500,norma:"Ley 24.051"} },
+  aire:  { pm10:{max:50,norma:"Ley 20.284 Art. 11°"}, pm25:{max:25,norma:"Res. 91/2016 SAyDS"}, ruido:{max:55,norma:"Ley 13.660 Art. 4°"} },
+  suelo: { ph:{min:6.0,max:7.5,norma:"Ley 24.051 Art. 2°"}, cobertura:{min:60,norma:"Ley 26.331 Art. 4°"} },
+};
+const CAMPOS = {
+  encuesta: [
+    { id:"comunidad",   label:"Comunidad / Zona",                 ph:"Ej: Los Molles",              req:true  },
+    { id:"actividad",   label:"Actividad económica predominante", ph:"Ej: Ganadería",               req:true  },
+    { id:"acceso_agua", label:"¿Tiene acceso a agua potable?",    req:true, tipo:"yesno"            },
+    { id:"servicios",   label:"Servicios disponibles",            ph:"Ej: Luz, gas, internet",      req:false },
+    { id:"impacto",     label:"Percepción del impacto ambiental", ph:"Positivo / Negativo / Neutro",req:false },
+    { id:"obs",         label:"Observaciones",                    ph:"Notas adicionales…",          req:false, area:true },
+  ],
+  censo: [
+    { id:"comunidad", label:"Comunidad / Localidad",           ph:"Ej: Villa Unión",      req:true       },
+    { id:"hogares",   label:"N° de hogares relevados",         ph:"Ej: 12",               req:true, num:true },
+    { id:"actividad", label:"Actividad principal de la zona",  ph:"Ej: Minería",          req:true       },
+    { id:"servicios", label:"Servicios básicos disponibles",   ph:"Ej: Agua, luz, gas",   req:false      },
+    { id:"referente", label:"Referente comunitario",           ph:"Nombre del referente", req:false      },
+    { id:"obs",       label:"Observaciones",                   ph:"Notas…",               req:false, area:true },
+  ],
+  agua: [
+    { id:"punto",         label:"Punto de muestreo",         ph:"Ej: Río Los Molles Norte", req:true            },
+    { id:"ph",            label:"pH",                        ph:"Ref: 6.5–8.5",             req:true, num:true, nk:"ph"           },
+    { id:"turbidez",      label:"Turbidez (NTU)",            ph:"Ref: < 5",                 req:true, num:true, nk:"turbidez"     },
+    { id:"oxigeno",       label:"Oxígeno disuelto (mg/L)",   ph:"Ref: > 6",                 req:false,num:true, nk:"oxigeno"      },
+    { id:"conductividad", label:"Conductividad (μS/cm)",     ph:"Ref: < 1500",              req:false,num:true, nk:"conductividad"},
+    { id:"temperatura",   label:"Temperatura (°C)",          ph:"Ej: 14",                   req:false,num:true                   },
+    { id:"obs",           label:"Observaciones",             ph:"Condiciones del sitio…",   req:false, area:true                 },
+  ],
+  aire: [
+    { id:"punto",  label:"Punto de muestreo",                ph:"Ej: Acceso principal",   req:true            },
+    { id:"pm10",   label:"PM10 (μg/m³)",                     ph:"Ref: < 50",              req:true, num:true, nk:"pm10"  },
+    { id:"pm25",   label:"PM2.5 (μg/m³)",                   ph:"Ref: < 25",              req:false,num:true, nk:"pm25"  },
+    { id:"ruido",  label:"Ruido (dB)",                       ph:"Ref: < 55",              req:true, num:true, nk:"ruido" },
+    { id:"viento", label:"Dirección y velocidad del viento", ph:"Ej: NE 15 km/h",         req:false          },
+    { id:"obs",    label:"Observaciones",                    ph:"Condiciones del sitio…", req:false, area:true},
+  ],
+  suelo: [
+    { id:"punto",         label:"Punto de muestreo",        ph:"Ej: Talud sector B",                   req:true            },
+    { id:"ph",            label:"pH suelo",                 ph:"Ref: 6.0–7.5",                         req:true, num:true, nk:"ph"       },
+    { id:"cobertura",     label:"Cobertura vegetal (%)",    ph:"Ref: > 60%",                            req:false,num:true, nk:"cobertura"},
+    { id:"erosion",       label:"Erosión",                  ph:"Sin erosión / Leve / Moderada / Severa",req:false          },
+    { id:"contaminantes", label:"Contaminantes detectados", ph:"Sin detección / Describir",             req:false          },
+    { id:"obs",           label:"Observaciones",            ph:"Condiciones del sitio…",                req:false, area:true},
+  ],
+};
+
+function ahora() { return new Date().toLocaleString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
+function horaCorta() { return new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}); }
+function checkAlerta(tipo, key, val) {
+  const r=NORMATIVA[tipo]?.[key]; if(!r||!val) return null;
+  const v=parseFloat(val); if(isNaN(v)) return null;
+  if((r.max&&v>r.max)||(r.min&&v<r.min)) return "critico";
+  if((r.max&&v>r.max*0.88)||(r.min&&v<r.min*1.12)) return "alerta";
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SPLASH
+// ═══════════════════════════════════════════════════════════════
+function Splash({ onDone }) {
+  const [ph,setPh]=useState(0);
+  useEffect(()=>{
+    const ts=[setTimeout(()=>setPh(1),400),setTimeout(()=>setPh(2),1200),setTimeout(()=>setPh(3),2600),setTimeout(onDone,3400)];
+    return ()=>ts.forEach(clearTimeout);
+  },[]);
+  return (
+    <div style={{ position:"fixed",inset:0,zIndex:999,background:"#1b4332",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",opacity:ph===3?0:1,transition:ph===3?"opacity 0.8s":"none",overflow:"hidden" }}>
+      <div style={{ position:"absolute",top:-120,right:-120,width:340,height:340,borderRadius:"50%",background:"rgba(82,183,136,0.06)" }}/>
+      <div style={{ opacity:ph>=0?1:0,transform:ph>=0?"scale(1) translateY(0)":"scale(0.8) translateY(24px)",transition:"all 1s cubic-bezier(0.34,1.4,0.64,1)",display:"flex",flexDirection:"column",alignItems:"center" }}>
+        <AndinaLogo size="xl" showSubtitle={ph>=1}/>
+      </div>
+      <div style={{ position:"absolute",bottom:60,left:"20%",right:"20%",opacity:ph>=2?1:0,transition:"opacity 0.5s" }}>
+        <div style={{ width:"100%",height:2,background:"rgba(255,255,255,0.07)",borderRadius:2,overflow:"hidden" }}>
+          <div style={{ height:"100%",width:ph>=2?"100%":"0%",background:"linear-gradient(90deg,#2d6a4f,#52b788)",transition:"width 1.2s ease",borderRadius:2 }}/>
+        </div>
+        <p style={{ color:"rgba(255,255,255,0.2)",fontFamily:"system-ui",fontSize:9,textAlign:"center",marginTop:8,letterSpacing:"0.15em" }}>v1.0</p>
+      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════════════════════════════
+function Login({ onLogin }) {
+  const [u,setU]=useState(""); const [p,setP]=useState("");
+  const [loading,setLoading]=useState(false); const [err,setErr]=useState("");
+  const [vis,setVis]=useState(false);
+  useEffect(()=>{ setTimeout(()=>setVis(true),80); },[]);
+  const handle=()=>{
+    if(!u||!p){ setErr("Completá todos los campos"); return; }
+    setLoading(true); setErr("");
+    setTimeout(()=>{
+      const user=USUARIOS.find(x=>x.nombre.toLowerCase()===u.toLowerCase()&&x.pass===p);
+      if(user) onLogin(user); else { setLoading(false); setErr("Usuario o contraseña incorrectos"); }
+    },900);
+  };
+  return (
+    <div style={{ flex:1,display:"flex",flexDirection:"column",background:"linear-gradient(160deg,#0a1a0f,#1b4332,#2d6a4f)",opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(20px)",transition:"all 0.6s",position:"relative",overflow:"hidden" }}>
+      <div style={{ position:"absolute",top:-80,right:-80,width:220,height:220,borderRadius:"50%",background:"rgba(82,183,136,0.07)" }}/>
+      <div style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"0 28px",position:"relative" }}>
+        <div style={{ marginBottom:24 }}><AndinaLogo size="lg" showSubtitle={true}/></div>
+        <div style={{ width:"100%",display:"flex",flexDirection:"column",gap:10 }}>
+          {[["USUARIO",u,setU,"text","Tu nombre"],["CONTRASEÑA",p,setP,"password","••••••••"]].map(([lbl,val,set,type,ph])=>(
+            <div key={lbl}>
+              <p style={{ color:"rgba(255,255,255,0.35)",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.18em",margin:"0 0 5px" }}>{lbl}</p>
+              <input value={val} onChange={e=>set(e.target.value)} type={type} placeholder={ph} onKeyDown={e=>e.key==="Enter"&&handle()}
+                style={{ width:"100%",background:"rgba(255,255,255,0.07)",border:`1.5px solid ${val?"rgba(82,183,136,0.4)":"rgba(255,255,255,0.12)"}`,borderRadius:14,padding:"13px 16px",color:"white",fontFamily:"system-ui",fontSize:14,outline:"none",boxSizing:"border-box" }}/>
             </div>
+          ))}
+          {err&&<p style={{ color:"#f4a261",fontFamily:"system-ui",fontSize:12,textAlign:"center",margin:0 }}>{err}</p>}
+          <button onClick={handle} style={{ width:"100%",marginTop:6,background:loading?"rgba(82,183,136,0.3)":"linear-gradient(135deg,#52b788,#2d6a4f)",border:"none",borderRadius:14,padding:"14px",color:"white",fontFamily:"system-ui",fontWeight:700,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8 }}>
+            {loading?<><div style={{ width:16,height:16,borderRadius:"50%",border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"white",animation:"spin 0.8s linear infinite" }}/>Verificando…</>:"Ingresar →"}
+          </button>
+        </div>
+        <p style={{ color:"rgba(255,255,255,0.15)",fontFamily:"system-ui",fontSize:10,marginTop:20,letterSpacing:"0.1em" }}>ACCESO RESTRINGIDO · EQUIPO AUTORIZADO</p>
+        <p style={{ color:"rgba(255,255,255,0.2)",fontFamily:"system-ui",fontSize:10,marginTop:4 }}>Demo: Gonzalo / 1234</p>
+      </div>
+      <style>{`input::placeholder{color:rgba(255,255,255,0.2)}`}</style>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INICIO — directo después del login, proyectos en botón ⚙
+// ═══════════════════════════════════════════════════════════════
+function Inicio({ user, proyecto, registros, online, pendientes, onNav, onVerProyectos, onSincronizar }) {
+  const hoy=registros.filter(r=>r.proyectoId===proyecto.id);
+  const alertasHoy=hoy.filter(r=>r.alerta).length;
+  return (
+    <div style={{ flex:1,overflowY:"auto",background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
+      <div style={{ padding:"14px 18px 10px" }}>
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12 }}>
+          <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+            <AndinaLogo size="sm" light={true} showSubtitle={false}/>
+            <div>
+              <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:10,margin:0 }}>Hola, {user.nombre}</p>
+              <p style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:13,margin:0,letterSpacing:1 }}>
+                Campo <span style={{ fontStyle:"italic",color:"#2d6a4f" }}>Digital</span>
+              </p>
+            </div>
+          </div>
+          <button onClick={onVerProyectos} style={{ background:"rgba(45,106,79,0.08)",border:"1px solid rgba(45,106,79,0.15)",borderRadius:10,padding:"6px 12px",cursor:"pointer" }}>
+            <span style={{ color:"#52b788",fontFamily:"system-ui",fontSize:10,fontWeight:600 }}>⚙ Proyectos</span>
+          </button>
+        </div>
+
+        <div style={{ background:`linear-gradient(135deg,${proyecto.color},${proyecto.color}dd)`,borderRadius:20,padding:"14px 16px",boxShadow:`0 6px 24px ${proyecto.color}44`,marginBottom:8 }}>
+          <p style={{ color:"rgba(255,255,255,0.4)",fontFamily:"system-ui",fontSize:8,fontWeight:700,letterSpacing:"0.2em",margin:"0 0 2px" }}>PROYECTO ACTIVO</p>
+          <p style={{ color:"white",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:18,margin:0,fontWeight:400 }}>{proyecto.nombre}</p>
+          <p style={{ color:"rgba(255,255,255,0.45)",fontFamily:"system-ui",fontSize:11,margin:"3px 0 8px" }}>{proyecto.cliente} · {proyecto.campaña}</p>
+          <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
+            <span style={{ background:"rgba(255,255,255,0.12)",color:"white",fontFamily:"system-ui",fontSize:10,padding:"3px 8px",borderRadius:8 }}>📋 {hoy.length} registros hoy</span>
+            {alertasHoy>0&&<span style={{ background:"rgba(192,57,43,0.4)",color:"white",fontFamily:"system-ui",fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:8 }}>🚨 {alertasHoy} alerta{alertasHoy>1?"s":""}</span>}
+            {!online&&pendientes>0&&<span style={{ background:"rgba(230,168,23,0.4)",color:"white",fontFamily:"system-ui",fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:8 }}>⏳ {pendientes} pend.</span>}
+          </div>
+        </div>
+
+        {!online&&pendientes>0&&(
+          <div style={{ background:"rgba(230,168,23,0.1)",border:"1px solid rgba(230,168,23,0.3)",borderRadius:12,padding:"8px 12px",display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
+            <span>⚠️</span>
+            <span style={{ color:"#e6a817",fontFamily:"system-ui",fontSize:11,flex:1 }}>Sin conexión · {pendientes} registro{pendientes>1?"s":""} pendiente{pendientes>1?"s":""}</span>
+            <button onClick={onSincronizar} style={{ background:"#e6a817",border:"none",borderRadius:8,padding:"4px 10px",color:"white",fontFamily:"system-ui",fontSize:10,fontWeight:700,cursor:"pointer" }}>Sync</button>
+          </div>
+        )}
+      </div>
+
+      <div style={{ padding:"0 16px 24px" }}>
+        <p style={{ color:"#52b788",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.2em",margin:"0 0 8px" }}>REGISTRAR</p>
+        <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+          {Object.entries(TIPO_CFG).map(([id,cfg])=>{
+            const count=hoy.filter(r=>r.tipo===id).length;
+            return (
+              <button key={id} onClick={()=>onNav(id)} style={{ background:`linear-gradient(135deg,${cfg.color},${cfg.color}dd)`,border:"none",borderRadius:16,padding:"12px 14px",display:"flex",alignItems:"center",gap:12,cursor:"pointer",boxShadow:`0 4px 14px ${cfg.color}33` }}>
+                <div style={{ width:40,height:40,borderRadius:11,background:"rgba(255,255,255,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>{cfg.icon}</div>
+                <p style={{ color:"white",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:17,margin:0,fontWeight:400,flex:1,textAlign:"left",letterSpacing:0.5 }}>{cfg.label}</p>
+                {count>0&&<span style={{ background:"rgba(255,255,255,0.2)",color:"white",fontFamily:"system-ui",fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:8 }}>{count} hoy</span>}
+                <span style={{ color:"rgba(255,255,255,0.35)",fontSize:18 }}>›</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROYECTOS — pantalla separada
+// ═══════════════════════════════════════════════════════════════
+function Proyectos({ proyectos, proyectoActivo, onCambiarActivo, onActualizar, onVolver }) {
+  const [editando,setEditando]=useState(null);
+  const [form,setForm]=useState({});
+  const abrirEditor=p=>{ setEditando(p.id); setForm({nombre:p.nombre,cliente:p.cliente,campaña:p.campaña}); };
+  const guardar=()=>{ if(!form.nombre.trim()) return; onActualizar(editando,form); setEditando(null); };
+  return (
+    <div style={{ flex:1,overflowY:"auto",background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
+      <div style={{ padding:"14px 18px 12px",borderBottom:"1px solid rgba(45,106,79,0.1)",position:"sticky",top:0,background:"rgba(240,250,244,0.96)",backdropFilter:"blur(12px)",zIndex:10 }}>
+        <button onClick={onVolver} style={{ color:"#52b788",fontFamily:"system-ui",fontSize:12,background:"none",border:"none",cursor:"pointer",padding:0,marginBottom:8 }}>‹ Inicio</button>
+        <p style={{ color:"#52b788",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.2em",margin:"0 0 2px" }}>GESTIÓN</p>
+        <h2 style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:400,margin:0 }}>
+          <span style={{ fontStyle:"italic",color:"#2d6a4f" }}>Proyectos</span>
+        </h2>
+        <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:11,margin:"4px 0 0" }}>Seleccioná el activo o editá los datos</p>
+      </div>
+      <div style={{ padding:"14px 16px",display:"flex",flexDirection:"column",gap:10 }}>
+        {proyectos.map(p=>(
+          <div key={p.id}>
+            {editando===p.id?(
+              <div style={{ background:"white",border:"1.5px solid rgba(45,106,79,0.2)",borderRadius:20,padding:"16px",boxShadow:"0 4px 16px rgba(27,67,50,0.1)" }}>
+                <p style={{ color:"#52b788",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.15em",margin:"0 0 12px" }}>EDITANDO PROYECTO</p>
+                {[["NOMBRE","nombre","Ej: Mina Los Andes"],["CLIENTE","cliente","Ej: Minera Patagónica S.A."],["CAMPAÑA","campaña","Ej: Q1 2026"]].map(([lbl,key,ph])=>(
+                  <div key={key} style={{ marginBottom:10 }}>
+                    <p style={{ color:"#2d6a4f",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.1em",margin:"0 0 5px" }}>{lbl}</p>
+                    <input value={form[key]||""} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))} placeholder={ph}
+                      style={{ width:"100%",background:"#f0faf4",border:`1.5px solid ${form[key]?"rgba(45,106,79,0.3)":"rgba(45,106,79,0.15)"}`,borderRadius:12,padding:"10px 14px",fontFamily:"system-ui",fontSize:14,outline:"none",boxSizing:"border-box",color:"#1a1a1a" }}/>
+                  </div>
+                ))}
+                <div style={{ display:"flex",gap:8,marginTop:4 }}>
+                  <button onClick={()=>setEditando(null)} style={{ flex:1,background:"#f0faf4",border:"1.5px solid rgba(45,106,79,0.2)",borderRadius:12,padding:"11px",color:"#52b788",fontFamily:"system-ui",fontWeight:600,fontSize:13,cursor:"pointer" }}>Cancelar</button>
+                  <button onClick={guardar} style={{ flex:2,background:"linear-gradient(135deg,#1b4332,#2d6a4f)",border:"none",borderRadius:12,padding:"11px",color:"white",fontFamily:"system-ui",fontWeight:700,fontSize:13,cursor:"pointer" }}>✓ Guardar cambios</button>
+                </div>
+              </div>
+            ):(
+              <div style={{ background:"white",border:`2px solid ${p.id===proyectoActivo.id?"rgba(45,106,79,0.4)":"rgba(45,106,79,0.1)"}`,borderRadius:20,padding:"16px",boxShadow:`0 4px 16px ${p.id===proyectoActivo.id?"rgba(27,67,50,0.12)":"rgba(27,67,50,0.05)"}` }}>
+                <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:10 }}>
+                  <div style={{ width:46,height:46,borderRadius:14,background:p.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:22 }}>⛏</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:"flex",alignItems:"center",gap:6,marginBottom:2 }}>
+                      <p style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:16,fontWeight:400,margin:0 }}>{p.nombre}</p>
+                      {p.id===proyectoActivo.id&&<span style={{ background:"#d8f3dc",color:"#2d6a4f",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:8 }}>✓ Activo</span>}
+                    </div>
+                    <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:11,margin:0 }}>{p.cliente} · {p.campaña}</p>
+                  </div>
+                </div>
+                <div style={{ display:"flex",gap:8 }}>
+                  {p.id!==proyectoActivo.id&&(
+                    <button onClick={()=>{ onCambiarActivo(p); onVolver(); }} style={{ flex:1,background:"#d8f3dc",border:"none",borderRadius:11,padding:"10px",color:"#2d6a4f",fontFamily:"system-ui",fontWeight:700,fontSize:12,cursor:"pointer" }}>✓ Seleccionar</button>
+                  )}
+                  <button onClick={()=>abrirEditor(p)} style={{ flex:1,background:"rgba(45,106,79,0.08)",border:"1px solid rgba(45,106,79,0.15)",borderRadius:11,padding:"10px",color:"#52b788",fontFamily:"system-ui",fontWeight:600,fontSize:12,cursor:"pointer" }}>✏ Editar</button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+        <div style={{ height:16 }}/>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FORMULARIO
+// ═══════════════════════════════════════════════════════════════
+function Formulario({ tipo, proyecto, user, onGuardar, onBack }) {
+  const cfg=TIPO_CFG[tipo]; const campos=CAMPOS[tipo]||[];
+  const [vals,setVals]=useState({}); const [guardado,setGuardado]=useState(false);
+  const reqsOk=campos.filter(c=>c.req&&c.tipo!=="yesno"&&!c.num).every(c=>vals[c.id]?.trim())
+    && campos.filter(c=>c.req&&c.num).every(c=>vals[c.id])
+    && campos.filter(c=>c.req&&c.tipo==="yesno").every(c=>vals[c.id]);
+  const alertas=campos.filter(c=>c.nk&&checkAlerta(tipo,c.nk,vals[c.id])==="critico").length;
+  const guardar=()=>{
+    const ad=campos.find(c=>c.nk&&checkAlerta(tipo,c.nk,vals[c.id])==="critico");
+    onGuardar({ tipo, proyectoId:proyecto.id, valores:vals, operador:`${user.nombre} ${user.apellido}`, timestamp:ahora(), alerta:ad?{nivel:"critico",campo:ad.label}:null, sincronizado:true });
+    setGuardado(true);
+  };
+  if(guardado) return (
+    <div style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(160deg,${cfg.color}18,${cfg.color}06)`,padding:28,gap:14 }}>
+      <div style={{ width:80,height:80,borderRadius:"50%",background:cfg.bg,border:`3px solid ${cfg.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:38 }}>{cfg.icon}</div>
+      <h3 style={{ color:cfg.color,fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:28,fontWeight:400,textAlign:"center",margin:0 }}>¡Guardado!</h3>
+      {alertas>0&&<span style={{ background:"#fde8e8",color:"#c0392b",fontFamily:"system-ui",fontSize:12,fontWeight:700,padding:"5px 14px",borderRadius:20 }}>🚨 {alertas} alerta registrada</span>}
+      <div style={{ background:"#d8f3dc",border:"1px solid rgba(45,106,79,0.2)",borderRadius:12,padding:"10px 14px",width:"100%" }}>
+        <p style={{ color:"#2d6a4f",fontFamily:"system-ui",fontSize:11,margin:0,textAlign:"center" }}>✓ Guardado en el dispositivo · No se pierde al cerrar</p>
+      </div>
+      <button onClick={onBack} style={{ width:"100%",background:cfg.color,border:"none",borderRadius:14,padding:"14px",color:"white",fontFamily:"system-ui",fontWeight:700,fontSize:14,cursor:"pointer" }}>← Volver al inicio</button>
+      <button onClick={()=>{setVals({});setGuardado(false);}} style={{ width:"100%",background:cfg.bg,border:"none",borderRadius:14,padding:"12px",color:cfg.color,fontFamily:"system-ui",fontWeight:600,fontSize:13,cursor:"pointer" }}>+ Nuevo registro</button>
+    </div>
+  );
+  return (
+    <div style={{ flex:1,display:"flex",flexDirection:"column",background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
+      <div style={{ padding:"14px 18px 12px",borderBottom:`1.5px solid ${cfg.bg}`,background:"rgba(255,255,255,0.9)",position:"sticky",top:0,zIndex:10,backdropFilter:"blur(12px)" }}>
+        <button onClick={onBack} style={{ color:cfg.color,fontFamily:"system-ui",fontSize:12,background:"none",border:"none",cursor:"pointer",padding:0,marginBottom:8 }}>‹ Inicio</button>
+        <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+          <div style={{ width:40,height:40,borderRadius:12,background:cfg.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>{cfg.icon}</div>
+          <div>
+            <p style={{ color:cfg.color,fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.15em",margin:0,opacity:0.7 }}>{proyecto.nombre}</p>
+            <p style={{ color:cfg.color,fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:17,fontWeight:400,margin:0 }}>{cfg.label}</p>
+          </div>
+        </div>
+      </div>
+      <div style={{ flex:1,overflowY:"auto",padding:"14px 16px",display:"flex",flexDirection:"column",gap:10 }}>
+        {alertas>0&&<div style={{ background:"#fde8e8",border:"1.5px solid rgba(192,57,43,0.2)",borderRadius:14,padding:"10px 14px" }}><p style={{ color:"#c0392b",fontFamily:"system-ui",fontSize:11,fontWeight:700,margin:0 }}>🚨 {alertas} parámetro{alertas>1?"s":""} fuera de norma</p></div>}
+        {campos.map(c=>{
+          const est=c.nk?checkAlerta(tipo,c.nk,vals[c.id]):null;
+          const norm=NORMATIVA[tipo]?.[c.nk];
+          return (
+            <div key={c.id}>
+              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5 }}>
+                <p style={{ color:cfg.color,fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.12em",margin:0 }}>{c.label.toUpperCase()} {c.req&&<span style={{ color:"#e07070" }}>*</span>}</p>
+                {norm&&<span style={{ background:cfg.bg,color:cfg.color,fontFamily:"system-ui",fontSize:9,padding:"1px 7px",borderRadius:8,opacity:0.8 }}>Ref: {norm.min?`${norm.min}–${norm.max||"∞"}`:`≤ ${norm.max}`}</span>}
+              </div>
+              {c.tipo==="yesno"?(
+                <div style={{ display:"flex",gap:8 }}>
+                  {["Sí","No","Parcialmente"].map(o=>(
+                    <button key={o} onClick={()=>setVals(v=>({...v,[c.id]:o}))} style={{ flex:1,padding:"10px",borderRadius:12,border:`1.5px solid ${vals[c.id]===o?cfg.color:"rgba(0,0,0,0.1)"}`,background:vals[c.id]===o?cfg.color:"white",color:vals[c.id]===o?"white":"#555",fontFamily:"system-ui",fontSize:12,fontWeight:vals[c.id]===o?700:400,cursor:"pointer" }}>{o}</button>
+                  ))}
+                </div>
+              ):c.area?(
+                <textarea value={vals[c.id]||""} onChange={e=>setVals(v=>({...v,[c.id]:e.target.value}))} placeholder={c.ph} rows={3}
+                  style={{ width:"100%",background:"white",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:12,padding:"11px 14px",fontFamily:"system-ui",fontSize:13,outline:"none",resize:"none",boxSizing:"border-box" }}/>
+              ):(
+                <input type={c.num?"number":"text"} value={vals[c.id]||""} onChange={e=>setVals(v=>({...v,[c.id]:e.target.value}))} placeholder={c.ph}
+                  style={{ width:"100%",background:est==="critico"?"#fde8e8":est==="alerta"?"#fef3cd":"white",border:`1.5px solid ${est==="critico"?"#c0392b":est==="alerta"?"#e6a817":vals[c.id]?cfg.color+"55":"rgba(0,0,0,0.1)"}`,borderRadius:12,padding:"11px 14px",fontFamily:"system-ui",fontSize:14,outline:"none",boxSizing:"border-box",color:"#1a1a1a" }}/>
+              )}
+              {est==="critico"&&norm&&<p style={{ color:"#c0392b",fontFamily:"system-ui",fontSize:10,margin:"3px 0 0",fontWeight:700 }}>🔴 Fuera de norma · {norm.norma}</p>}
+              {est==="alerta"&&norm&&<p style={{ color:"#e6a817",fontFamily:"system-ui",fontSize:10,margin:"3px 0 0",fontWeight:700 }}>🟡 Cerca del límite · {norm.norma}</p>}
+            </div>
+          );
+        })}
+        <button onClick={guardar} disabled={!reqsOk} style={{ width:"100%",background:reqsOk?`linear-gradient(135deg,${cfg.color},${cfg.color}cc)`:"rgba(45,106,79,0.1)",border:"none",borderRadius:16,padding:"14px",color:reqsOk?"white":"#95d5b2",fontFamily:"system-ui",fontWeight:700,fontSize:14,cursor:reqsOk?"pointer":"default" }}>
+          {reqsOk?`Guardar registro ${alertas>0?"⚠️":"✓"}`:"Completá los campos obligatorios (*)"}
+        </button>
+        <div style={{ height:16 }}/>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HISTORIAL
+// ═══════════════════════════════════════════════════════════════
+function Historial({ registros, proyecto }) {
+  const [filtro,setFiltro]=useState("todos"); const [busqueda,setBusqueda]=useState("");
+  const todos=registros.filter(r=>r.proyectoId===proyecto.id);
+  const filtrados=todos.filter(r=>(filtro==="todos"||r.tipo===filtro)&&(!busqueda||JSON.stringify(r).toLowerCase().includes(busqueda.toLowerCase())));
+  return (
+    <div style={{ flex:1,overflowY:"auto",background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
+      <div style={{ padding:"14px 18px 12px",borderBottom:"1px solid rgba(45,106,79,0.1)",position:"sticky",top:0,background:"rgba(240,250,244,0.96)",backdropFilter:"blur(12px)",zIndex:10 }}>
+        <p style={{ color:"#52b788",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.2em",margin:"0 0 2px" }}>HISTORIAL · {proyecto.nombre}</p>
+        <h2 style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:400,margin:"0 0 10px" }}>
+          Todos los <span style={{ fontStyle:"italic",color:"#2d6a4f" }}>registros</span>
+          {todos.length>0&&<span style={{ color:"#52b788",fontFamily:"system-ui",fontSize:16 }}> · {todos.length}</span>}
+        </h2>
+        <input value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="🔍 Buscar…"
+          style={{ width:"100%",background:"white",border:"1.5px solid rgba(45,106,79,0.15)",borderRadius:12,padding:"9px 14px",fontFamily:"system-ui",fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:8 }}/>
+        <div style={{ display:"flex",gap:6,overflowX:"auto" }}>
+          {[["todos","Todos"],...Object.entries(TIPO_CFG).map(([k,v])=>[k,`${v.icon} ${v.label.split(" ")[0]}`])].map(([id,lbl])=>(
+            <button key={id} onClick={()=>setFiltro(id)} style={{ padding:"5px 12px",borderRadius:20,border:"none",cursor:"pointer",background:filtro===id?"#2d6a4f":"rgba(45,106,79,0.08)",color:filtro===id?"white":"#52b788",fontFamily:"system-ui",fontSize:11,fontWeight:600,flexShrink:0 }}>{lbl}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding:"12px 16px",display:"flex",flexDirection:"column",gap:8 }}>
+        {filtrados.length===0&&<div style={{ textAlign:"center",padding:"40px 0" }}><div style={{ fontSize:40,marginBottom:10 }}>📋</div><p style={{ color:"#b7e4c7",fontFamily:"system-ui",fontSize:13 }}>Sin registros{filtro!=="todos"?" de este tipo":""}</p></div>}
+        {filtrados.map(r=>{
+          const cfg=TIPO_CFG[r.tipo];
+          return (
+            <div key={r.id} style={{ background:"white",border:`1.5px solid ${cfg.bg}`,borderRadius:16,padding:"12px 14px",boxShadow:"0 2px 8px rgba(27,67,50,0.05)" }}>
+              <div style={{ display:"flex",alignItems:"flex-start",gap:10 }}>
+                <div style={{ width:36,height:36,borderRadius:10,background:cfg.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0 }}>{cfg.icon}</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3 }}>
+                    <span style={{ background:cfg.bg,color:cfg.color,fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>{cfg.label}</span>
+                    {r.alerta&&<span style={{ background:"#fde8e8",color:"#c0392b",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>🚨 Alerta</span>}
+                    <span style={{ color:"#ccc",fontFamily:"system-ui",fontSize:10 }}>· {r.timestamp}</span>
+                  </div>
+                  <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:"0 0 2px",fontWeight:500 }}>{r.valores?.comunidad||r.valores?.punto||"Sin detalle"}</p>
+                  <div style={{ display:"flex",gap:8 }}>
+                    <span style={{ color:"#aaa",fontFamily:"system-ui",fontSize:10 }}>👤 {r.operador}</span>
+                    <span style={{ color:"#52b788",fontFamily:"system-ui",fontSize:10 }}>✓ Guardado</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        <div style={{ height:16 }}/>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// QR
+// ═══════════════════════════════════════════════════════════════
+function QRCliente({ proyectos }) {
+  const [sel,setSel]=useState(null);
+  return (
+    <div style={{ flex:1,overflowY:"auto",background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
+      <div style={{ padding:"14px 18px 12px",borderBottom:"1px solid rgba(45,106,79,0.1)" }}>
+        <p style={{ color:"#52b788",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.2em",margin:"0 0 2px" }}>ACCESO CLIENTE</p>
+        <h2 style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:400,margin:0 }}>Dashboard <span style={{ fontStyle:"italic",color:"#2d6a4f" }}>QR</span></h2>
+        <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:11,margin:"4px 0 0" }}>El cliente escanea el QR y ve sus datos en tiempo real</p>
+      </div>
+      <div style={{ padding:"14px 16px",display:"flex",flexDirection:"column",gap:10 }}>
+        {proyectos.map(p=>(
+          <div key={p.id} style={{ background:"white",borderRadius:18,overflow:"hidden",boxShadow:"0 2px 12px rgba(27,67,50,0.07)",border:"1.5px solid rgba(45,106,79,0.08)" }}>
+            <div style={{ padding:"14px 16px" }}>
+              <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:10 }}>
+                <div style={{ width:42,height:42,borderRadius:12,background:p.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>⛏</div>
+                <div>
+                  <p style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:15,margin:0 }}>{p.nombre}</p>
+                  <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:11,margin:"2px 0 0" }}>{p.cliente}</p>
+                </div>
+              </div>
+              <button onClick={()=>setSel(sel===p.id?null:p.id)} style={{ width:"100%",background:sel===p.id?"#f0faf4":p.color,border:"none",borderRadius:12,padding:"10px",color:sel===p.id?p.color:"white",fontFamily:"system-ui",fontWeight:700,fontSize:13,cursor:"pointer" }}>
+                {sel===p.id?"Ocultar QR":"📱 Mostrar QR para cliente"}
+              </button>
+            </div>
+            {sel===p.id&&(
+              <div style={{ padding:"16px",borderTop:"1px solid rgba(45,106,79,0.08)",background:"#f9fffe",display:"flex",flexDirection:"column",alignItems:"center",gap:12 }}>
+                <div style={{ width:150,height:150,background:"white",borderRadius:12,padding:10,boxShadow:"0 4px 16px rgba(0,0,0,0.1)",display:"grid",gridTemplateColumns:"repeat(10,1fr)",gap:1.5 }}>
+                  {Array.from({length:100}).map((_,i)=>{ const c=(i<30&&i%10<3)||(i<30&&i%10>6)||(i>69&&i%10<3); const r=((i*7+p.id*13)%3===0); return <div key={i} style={{ background:c||r?p.color:"transparent",borderRadius:1 }}/>; })}
+                </div>
+                <p style={{ color:"#1b4332",fontFamily:"system-ui",fontSize:11,fontWeight:600,margin:0,textAlign:"center" }}>andina.app/{p.nombre.toLowerCase().replace(/ /g,"-")}</p>
+                <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:10,margin:0,textAlign:"center" }}>Solo lectura · Sin acceso al sistema interno</p>
+                <div style={{ display:"flex",gap:8,width:"100%" }}>
+                  <button style={{ flex:1,background:"#d8f3dc",border:"none",borderRadius:10,padding:"9px",color:"#2d6a4f",fontFamily:"system-ui",fontWeight:600,fontSize:12,cursor:"pointer" }}>📤 Compartir</button>
+                  <button style={{ flex:1,background:"#d8f3dc",border:"none",borderRadius:10,padding:"9px",color:"#2d6a4f",fontFamily:"system-ui",fontWeight:600,fontSize:12,cursor:"pointer" }}>🔄 Renovar</button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+        <div style={{ height:16 }}/>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FORMULARIOS / VERSIONADO
+// ═══════════════════════════════════════════════════════════════
+const PLANTILLAS_DEF=[
+  { id:1,nombre:"Relevamiento inicial",comunidad:"Los Molles", version:1,bloqueado:true, usos:24,modificado:"10/03/2026" },
+  { id:2,nombre:"Impacto percibido",   comunidad:"Villa Unión",version:1,bloqueado:false,usos:8, modificado:"12/03/2026" },
+  { id:3,nombre:"Censo básico",        comunidad:"El Retamo",  version:2,bloqueado:false,usos:0, modificado:"17/03/2026" },
+];
+function Formularios() {
+  const [plantillas,setPlantillas]=useState(()=>load("plantillas",PLANTILLAS_DEF));
+  const [sel,setSel]=useState(null);
+  const form=sel?plantillas.find(f=>f.id===sel):null;
+  const upd=ps=>{ setPlantillas(ps); save("plantillas",ps); };
+  return (
+    <div style={{ flex:1,overflowY:"auto",background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
+      <div style={{ padding:"14px 18px 12px",borderBottom:"1px solid rgba(45,106,79,0.1)",position:"sticky",top:0,background:"rgba(240,250,244,0.96)",backdropFilter:"blur(12px)",zIndex:10 }}>
+        {sel&&<button onClick={()=>setSel(null)} style={{ color:"#52b788",fontFamily:"system-ui",fontSize:12,background:"none",border:"none",cursor:"pointer",padding:0,marginBottom:8 }}>‹ Plantillas</button>}
+        <p style={{ color:"#52b788",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.2em",margin:"0 0 2px" }}>VERSIONADO</p>
+        <h2 style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:400,margin:0 }}>
+          {sel?form.nombre:<>Formularios <span style={{ fontStyle:"italic",color:"#2d6a4f" }}>y plantillas</span></>}
+        </h2>
+      </div>
+      <div style={{ padding:"14px 16px",display:"flex",flexDirection:"column",gap:10 }}>
+        {!sel?(
+          <>
+            <div style={{ background:"linear-gradient(135deg,#1b4332,#2d6a4f)",borderRadius:16,padding:"13px 16px" }}>
+              <p style={{ color:"rgba(255,255,255,0.65)",fontFamily:"system-ui",fontSize:11,margin:0,lineHeight:1.6 }}>🔒 Los formularios bloqueados no se pueden modificar durante una campaña activa.</p>
+            </div>
+            {plantillas.map(f=>(
+              <button key={f.id} onClick={()=>setSel(f.id)} style={{ background:"white",border:`1.5px solid ${f.bloqueado?"#d0e8f5":"rgba(45,106,79,0.1)"}`,borderRadius:18,padding:"14px 16px",cursor:"pointer",textAlign:"left",boxShadow:"0 3px 12px rgba(27,67,50,0.06)" }}>
+                <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+                  <div style={{ width:42,height:42,borderRadius:12,background:f.bloqueado?"#d0e8f5":"#d8f3dc",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>📝</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:3 }}>
+                      <span style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:15 }}>{f.nombre}</span>
+                      <span style={{ background:f.bloqueado?"#d0e8f5":"#d8f3dc",color:f.bloqueado?"#1e6091":"#2d6a4f",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:8 }}>{f.bloqueado?"🔒 Bloqueado":"✅ Activo"}</span>
+                      <span style={{ background:"#f0faf4",color:"#52b788",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:8 }}>v{f.version}</span>
+                    </div>
+                    <p style={{ color:"#888",fontFamily:"system-ui",fontSize:11,margin:0 }}>📍 {f.comunidad} · {f.usos} usos</p>
+                  </div>
+                  <span style={{ color:"#b7e4c7",fontSize:18 }}>›</span>
+                </div>
+              </button>
+            ))}
+            <button style={{ border:"2px dashed rgba(45,106,79,0.2)",borderRadius:16,padding:"14px",color:"#52b788",fontFamily:"system-ui",fontSize:13,fontWeight:600,background:"none",cursor:"pointer",textAlign:"center" }}>+ Nueva plantilla</button>
+          </>
+        ):(
+          <div style={{ background:"white",borderRadius:18,padding:"16px",border:"1.5px solid rgba(45,106,79,0.1)" }}>
+            <div style={{ display:"flex",gap:10,marginBottom:12 }}>
+              <div style={{ flex:1,background:"#f0faf4",borderRadius:12,padding:"10px",textAlign:"center" }}>
+                <p style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:26,margin:0 }}>v{form.version}</p>
+                <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:10,margin:"2px 0 0" }}>Versión</p>
+              </div>
+              <div style={{ flex:1,background:form.bloqueado?"#d0e8f5":"#d8f3dc",borderRadius:12,padding:"10px",textAlign:"center" }}>
+                <p style={{ color:form.bloqueado?"#1e6091":"#2d6a4f",fontFamily:"system-ui",fontSize:13,fontWeight:700,margin:0 }}>{form.bloqueado?"🔒 Bloqueado":"✅ Activo"}</p>
+              </div>
+            </div>
+            {form.bloqueado
+              ?<button onClick={()=>upd(plantillas.map(p=>p.id===form.id?{...p,bloqueado:false}:p))} style={{ width:"100%",background:"#f0faf4",border:"1.5px solid rgba(45,106,79,0.2)",borderRadius:12,padding:"11px",color:"#2d6a4f",fontFamily:"system-ui",fontWeight:600,fontSize:13,cursor:"pointer" }}>🔓 Desbloquear</button>
+              :<button onClick={()=>upd(plantillas.map(p=>p.id===form.id?{...p,bloqueado:true}:p))} style={{ width:"100%",background:"#1e6091",border:"none",borderRadius:12,padding:"11px",color:"white",fontFamily:"system-ui",fontWeight:700,fontSize:13,cursor:"pointer" }}>🔒 Bloquear para campaña activa</button>
+            }
+          </div>
+        )}
+        <div style={{ height:16 }}/>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════════════
+export default function App() {
+  const [screen,    setScreen]    = useState("splash");
+  const [user,      setUser]      = useState(null);
+  const [tab,       setTab]       = useState("inicio");
+  const [tipoForm,  setTipoForm]  = useState(null);
+  const [online,    setOnline]    = useState(true);
+  const [pendientes,setPendientes]= useState(0);
+
+  const [proyectos,setProyectos] = useState(()=>load("proyectos",PROYECTOS_DEF));
+  const [proyecto, setProyecto]  = useState(()=>{ const ps=load("proyectos",PROYECTOS_DEF); const id=load("proyectoActivo",1); return ps.find(p=>p.id===id)||ps[0]; });
+
+  const actualizarProyecto=(id,cambios)=>{
+    const n=proyectos.map(p=>p.id===id?{...p,...cambios}:p);
+    setProyectos(n); save("proyectos",n);
+    if(proyecto?.id===id){ const a={...proyecto,...cambios}; setProyecto(a); save("proyectoActivo",a.id); }
+  };
+  const cambiarActivo=p=>{ setProyecto(p); save("proyectoActivo",p.id); };
+
+  const [registros,setRegistros] = useState(()=>load("registros",[]));
+  const addRegistro=r=>{ const n=[{...r,id:Date.now()},...registros]; setRegistros(n); save("registros",n); if(!online) setPendientes(p=>p+1); };
+  const sincronizar=()=>{ const s=registros.map(r=>({...r,sincronizado:true})); setRegistros(s); save("registros",s); setPendientes(0); };
+
+  const hoyCount=proyecto?registros.filter(r=>r.proyectoId===proyecto.id).length:0;
+
+  const renderContent=()=>{
+    if(screen==="login") return <Login onLogin={u=>{ setUser(u); setScreen("app"); setTab("inicio"); }}/>;
+    if(screen!=="app") return null;
+    if(tab==="proyectos") return <Proyectos proyectos={proyectos} proyectoActivo={proyecto} onCambiarActivo={cambiarActivo} onActualizar={actualizarProyecto} onVolver={()=>setTab("inicio")}/>;
+    if(tab==="form"&&tipoForm) return <Formulario tipo={tipoForm} proyecto={proyecto} user={user} onGuardar={r=>addRegistro(r)} onBack={()=>{ setTipoForm(null); setTab("inicio"); }}/>;
+    if(tab==="historial") return <Historial registros={registros} proyecto={proyecto}/>;
+    if(tab==="qr") return <QRCliente proyectos={proyectos}/>;
+    if(tab==="formularios") return <Formularios/>;
+    return <Inicio user={user} proyecto={proyecto} registros={registros} online={online} pendientes={pendientes} onNav={tipo=>{ setTipoForm(tipo); setTab("form"); }} onVerProyectos={()=>setTab("proyectos")} onSincronizar={sincronizar}/>;
+  };
+
+  return (
+    <div style={{ width:"100%",height:"100vh",display:"flex",flexDirection:"column",overflow:"hidden",position:"relative" }}>
+      {screen==="splash"&&<Splash onDone={()=>setScreen("login")}/>}
+      {screen!=="splash"&&(
+        <div style={{ height:28,background:"rgba(0,0,0,0.2)",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",flexShrink:0 }}>
+          <span style={{ color:"rgba(255,255,255,0.65)",fontFamily:"system-ui",fontSize:10,fontWeight:600 }}>{horaCorta()}</span>
+          <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+            {pendientes>0&&<span style={{ background:"#e6a817",color:"white",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"1px 7px",borderRadius:8 }}>{pendientes} pend.</span>}
+            <button onClick={()=>setOnline(o=>!o)} style={{ display:"flex",alignItems:"center",gap:4,background:"none",border:"none",cursor:"pointer",padding:0 }}>
+              <div style={{ width:6,height:6,borderRadius:"50%",background:online?"#52b788":"#e07070" }}/>
+              <span style={{ color:online?"#52b788":"#e07070",fontFamily:"system-ui",fontSize:10 }}>{online?"En línea":"Sin conexión"}</span>
+            </button>
+          </div>
+        </div>
+      )}
+      <div style={{ flex:1,overflow:"hidden",display:"flex",flexDirection:"column" }}>{renderContent()}</div>
+      {screen==="app"&&tab!=="form"&&tab!=="proyectos"&&(
+        <div style={{ height:64,background:"white",borderTop:"1px solid rgba(45,106,79,0.1)",display:"flex",alignItems:"center",justifyContent:"space-around",flexShrink:0,boxShadow:"0 -4px 20px rgba(27,67,50,0.08)" }}>
+          {[{id:"inicio",icon:"⊞",label:"Inicio"},{id:"formularios",icon:"📝",label:"Plantillas"},{fab:true},{id:"qr",icon:"📱",label:"QR"},{id:"historial",icon:"☰",label:"Historial",badge:hoyCount}].map((t,i)=>
+            t.fab?(
+              <button key="fab" onClick={()=>setTab("inicio")} style={{ width:52,height:52,borderRadius:"50%",background:"#2d6a4f",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",marginTop:-20,boxShadow:"0 4px 16px rgba(27,67,50,0.3)",flex:1 }}>
+                <span style={{ fontSize:24,color:"white" }}>+</span>
+              </button>
+            ):(
+              <button key={t.id} onClick={()=>setTab(t.id)} style={{ background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,flex:1,position:"relative" }}>
+                <span style={{ fontSize:tab===t.id?19:15,color:tab===t.id?"#2d6a4f":"#bbb",transition:"all 0.2s" }}>{t.icon}</span>
+                <span style={{ fontFamily:"system-ui",fontSize:9,color:tab===t.id?"#2d6a4f":"#bbb",fontWeight:tab===t.id?700:400 }}>{t.label}</span>
+                {tab===t.id&&<div style={{ width:18,height:2.5,background:"#2d6a4f",borderRadius:2 }}/>}
+                {t.badge>0&&<div style={{ position:"absolute",top:-2,right:4,width:16,height:16,borderRadius:"50%",background:"#52b788",display:"flex",alignItems:"center",justifyContent:"center" }}><span style={{ color:"white",fontFamily:"system-ui",fontSize:9,fontWeight:700 }}>{t.badge}</span></div>}
+              </button>
+            )
           )}
         </div>
       )}
     </div>
   );
-}
-
-// ─── SPLASH SCREEN ───────────────────────────────────────────────────────────
-function SplashScreen({ onDone }) {
-  const [phase, setPhase] = useState(0);
-  useEffect(() => {
-    const t1 = setTimeout(() => setPhase(1), 400);
-    const t2 = setTimeout(() => setPhase(2), 900);
-    const t3 = setTimeout(() => setPhase(3), 1400);
-    const t4 = setTimeout(() => onDone(), 2600);
-    return () => [t1, t2, t3, t4].forEach(clearTimeout);
-  }, [onDone]);
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "linear-gradient(160deg,#0d2818 0%,#1b4332 50%,#2d6a4f 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
-      <div style={{ opacity: phase >= 1 ? 1 : 0, transform: phase >= 1 ? "translateY(0)" : "translateY(20px)", transition: "all 0.6s ease" }}>
-        <AndinaLogo size="xl" showText={false} />
-      </div>
-      <div style={{ marginTop: 20, opacity: phase >= 2 ? 1 : 0, transform: phase >= 2 ? "translateY(0)" : "translateY(12px)", transition: "all 0.6s ease 0.1s", textAlign: "center" }}>
-        <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 42, fontWeight: 400, letterSpacing: "0.2em", color: "white" }}>ANDINA</div>
-        <div style={{ fontFamily: "'Montserrat', system-ui, sans-serif", fontSize: 10, fontWeight: 300, letterSpacing: "0.3em", color: "rgba(255,255,255,0.5)", marginTop: 4 }}>CONSULTORA SOCIOAMBIENTAL</div>
-      </div>
-      <div style={{ marginTop: 16, opacity: phase >= 3 ? 1 : 0, transition: "opacity 0.5s ease", textAlign: "center" }}>
-        <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, fontStyle: "italic", color: "#52b788" }}>Campo Digital</div>
-        <div style={{ marginTop: 16, width: 120, height: 2, background: "rgba(82,183,136,0.2)", borderRadius: 1, overflow: "hidden", margin: "14px auto 0" }}>
-          <div style={{ height: "100%", background: "#52b788", width: phase >= 3 ? "100%" : "0%", transition: "width 0.9s ease", borderRadius: 1 }} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
-const USERS = [
-  { user: "gonzalo", pass: "1234", name: "Gonzalo", role: "admin" },
-  { user: "laura", pass: "1234", name: "Laura", role: "operador" },
-  { user: "equipo", pass: "andina", name: "Equipo", role: "operador" },
-];
-
-function LoginScreen({ onLogin }) {
-  const [user, setUser] = useState("");
-  const [pass, setPass] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleLogin = () => {
-    setLoading(true);
-    setError("");
-    setTimeout(() => {
-      const found = USERS.find(u => u.user === user.toLowerCase().trim() && u.pass === pass);
-      if (found) {
-        onLogin(found);
-      } else {
-        setError("Usuario o contraseña incorrectos");
-        setLoading(false);
-      }
-    }, 600);
-  };
-
-  return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#0d2818,#1b4332)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ marginBottom: 40 }}><AndinaLogo size="lg" /></div>
-      <div style={{ width: "100%", maxWidth: 340, background: "rgba(255,255,255,0.06)", borderRadius: 24, padding: 28, border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(12px)" }}>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, letterSpacing: "0.2em", color: "#52b788", margin: "0 0 20px", textTransform: "uppercase" }}>Acceso del equipo</p>
-        <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ width: "100%", padding: "14px 16px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 12, color: "white", fontFamily: "'Montserrat', sans-serif", fontSize: 14, marginBottom: 12, outline: "none", boxSizing: "border-box" }} />
-        <input value={pass} onChange={e => setPass(e.target.value)} type="password" placeholder="Contraseña" onKeyDown={e => e.key === "Enter" && handleLogin()} style={{ width: "100%", padding: "14px 16px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 12, color: "white", fontFamily: "'Montserrat', sans-serif", fontSize: 14, marginBottom: error ? 8 : 20, outline: "none", boxSizing: "border-box" }} />
-        {error && <p style={{ color: "#f87171", fontFamily: "'Montserrat', sans-serif", fontSize: 12, margin: "0 0 14px" }}>{error}</p>}
-        <button onClick={handleLogin} disabled={loading || !user || !pass} style={{ width: "100%", padding: "15px", background: loading ? "rgba(82,183,136,0.5)" : "linear-gradient(135deg,#2d6a4f,#52b788)", border: "none", borderRadius: 14, color: "white", fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: 15, cursor: loading ? "default" : "pointer", transition: "all 0.2s" }}>
-          {loading ? "Ingresando..." : "Ingresar"}
-        </button>
-      </div>
-      <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 32, textAlign: "center" }}>Solo personal autorizado de Andina</p>
-    </div>
-  );
-}
-
-// ─── PROJECT SELECT ────────────────────────────────────────────────────────────
-const PROJECTS = [
-  { id: "p1", name: "Mina Los Andes", client: "Minera Sur S.A.", campaign: "Monitoreo Q1 2026", color: "#2d6a4f" },
-  { id: "p2", name: "Río Blanco", client: "Energía Patagónica", campaign: "EIA Fase 2", color: "#1e5f44" },
-  { id: "p3", name: "Cerro Negro", client: "Litio Andino S.A.", campaign: "Línea de base 2026", color: "#40916c" },
-];
-
-function ProjectSelect({ user, onSelect }) {
-  return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#0d2818,#1b4332)", padding: "40px 20px" }}>
-      <div style={{ marginBottom: 32 }}>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, letterSpacing: "0.2em", color: "#52b788", margin: "0 0 4px" }}>BIENVENIDO/A</p>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 32, fontWeight: 400, color: "white", margin: 0 }}>{user.name}</h1>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: "rgba(255,255,255,0.4)", margin: "4px 0 0" }}>Seleccioná el proyecto de hoy</p>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {PROJECTS.map(p => (
-          <button key={p.id} onClick={() => onSelect(p)} style={{ background: `linear-gradient(135deg,${p.color},rgba(82,183,136,0.4))`, border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "20px 22px", textAlign: "left", cursor: "pointer", transition: "transform 0.15s" }}
-            onPointerDown={e => e.currentTarget.style.transform = "scale(0.97)"}
-            onPointerUp={e => e.currentTarget.style.transform = "scale(1)"}>
-            <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.2em", color: "rgba(255,255,255,0.55)", margin: "0 0 4px" }}>{p.client.toUpperCase()}</p>
-            <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 24, fontWeight: 400, color: "white", margin: "0 0 4px" }}>{p.name}</p>
-            <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: "rgba(255,255,255,0.55)", margin: 0 }}>{p.campaign}</p>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── DATA STORAGE ──────────────────────────────────────────────────────────────
-let globalRecords = [];
-let recordIdCounter = 1;
-
-function saveRecord(type, data, user, project) {
-  const record = {
-    id: recordIdCounter++,
-    type,
-    data,
-    operator: user.name,
-    project: project.name,
-    projectId: project.id,
-    timestamp: new Date().toISOString(),
-    synced: false,
-  };
-  globalRecords.push(record);
-  return record;
-}
-
-function getTodayRecords(projectId) {
-  const today = new Date().toDateString();
-  return globalRecords.filter(r => r.projectId === projectId && new Date(r.timestamp).toDateString() === today);
-}
-
-// ─── HOME SCREEN ───────────────────────────────────────────────────────────────
-function HomeScreen({ user, project, onNavigate, onChangeProject }) {
-  const todayRecords = getTodayRecords(project.id);
-  const counts = {
-    encuesta: todayRecords.filter(r => r.type === "encuesta").length,
-    censo: todayRecords.filter(r => r.type === "censo").length,
-    agua: todayRecords.filter(r => r.type === "agua").length,
-    aire: todayRecords.filter(r => r.type === "aire").length,
-    suelo: todayRecords.filter(r => r.type === "suelo").length,
-  };
-
-  const modules = [
-    { id: "encuesta", label: "Encuesta", sub: "Social", icon: "📋", color: "#2d6a4f", bg: "#d8f3dc" },
-    { id: "censo", label: "Censo", sub: "Comunitario", icon: "🏘", color: "#1e5f44", bg: "#b7e4c7" },
-    { id: "agua", label: "Monitoreo", sub: "Agua", icon: "💧", color: "#1a5276", bg: "#d6eaf8" },
-    { id: "aire", label: "Monitoreo", sub: "Aire", icon: "💨", color: "#4a235a", bg: "#e8daef" },
-    { id: "suelo", label: "Monitoreo", sub: "Suelo", icon: "🌱", color: "#784212", bg: "#fdebd0" },
-  ];
-
-  return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#f0faf4,#e8f5e9)", paddingBottom: 90 }}>
-      {/* Header */}
-      <div style={{ background: "linear-gradient(135deg,#1b4332,#2d6a4f)", padding: "50px 20px 24px", position: "relative" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <svg viewBox="0 0 100 70" fill="none" style={{ width: 28, height: 20 }}>
-              <polygon points="50,5 68,42 32,42" fill="#52b788" />
-              <polygon points="22,20 38,50 6,50" fill="#40916c" />
-              <polygon points="78,20 94,50 62,50" fill="#40916c" />
-            </svg>
-            <div>
-              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 16, color: "white", letterSpacing: "0.1em" }}>ANDINA</div>
-              <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 8, color: "rgba(255,255,255,0.45)", letterSpacing: "0.15em" }}>CAMPO DIGITAL</div>
-            </div>
-          </div>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, color: "white", fontSize: 15 }}>
-            {user.name[0].toUpperCase()}
-          </div>
-        </div>
-        {/* Project card */}
-        <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px", border: "1px solid rgba(255,255,255,0.12)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.15em", color: "rgba(255,255,255,0.5)", margin: "0 0 2px" }}>PROYECTO ACTIVO</p>
-              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 20, color: "white", margin: "0 0 2px", fontWeight: 400 }}>{project.name}</p>
-              <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "rgba(255,255,255,0.55)", margin: 0 }}>{project.campaign}</p>
-            </div>
-            <button onClick={onChangeProject} style={{ background: "rgba(82,183,136,0.2)", border: "1px solid rgba(82,183,136,0.3)", borderRadius: 10, padding: "6px 10px", color: "#74c69d", fontFamily: "'Montserrat', sans-serif", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>
-              ⇄ Cambiar
-            </button>
-          </div>
-          <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-            <div style={{ textAlign: "center" }}>
-              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 20, color: "white", margin: 0 }}>{todayRecords.length}</p>
-              <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, color: "rgba(255,255,255,0.4)", margin: 0 }}>hoy</p>
-            </div>
-            <div style={{ width: 1, background: "rgba(255,255,255,0.1)" }} />
-            <div style={{ textAlign: "center" }}>
-              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 20, color: "#f59e0b", margin: 0 }}>{todayRecords.filter(r => r.data.alertas?.length > 0).length}</p>
-              <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, color: "rgba(255,255,255,0.4)", margin: 0 }}>alertas</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Modules grid */}
-      <div style={{ padding: "20px 16px" }}>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, letterSpacing: "0.2em", color: "#74c69d", margin: "0 0 14px" }}>MÓDULOS DE REGISTRO</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          {modules.map(m => (
-            <button key={m.id} onClick={() => onNavigate(m.id)}
-              style={{ background: "white", borderRadius: 18, padding: "18px 16px", textAlign: "left", border: "1.5px solid rgba(0,0,0,0.06)", cursor: "pointer", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", transition: "transform 0.15s, box-shadow 0.15s", position: "relative" }}
-              onPointerDown={e => { e.currentTarget.style.transform = "scale(0.96)"; e.currentTarget.style.boxShadow = "0 1px 6px rgba(0,0,0,0.08)"; }}
-              onPointerUp={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.06)"; }}>
-              {counts[m.id] > 0 && (
-                <div style={{ position: "absolute", top: 12, right: 12, background: m.color, borderRadius: 10, padding: "2px 7px", fontFamily: "'Montserrat', sans-serif", fontSize: 10, fontWeight: 700, color: "white" }}>{counts[m.id]}</div>
-              )}
-              <div style={{ width: 44, height: 44, borderRadius: 14, background: m.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 10 }}>{m.icon}</div>
-              <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "#888", margin: "0 0 2px" }}>{m.label}</p>
-              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 18, color: "#1b4332", margin: 0, fontWeight: 400 }}>{m.sub}</p>
-            </button>
-          ))}
-          <button onClick={() => onNavigate("plantillas")}
-            style={{ background: "linear-gradient(135deg,#1b4332,#2d6a4f)", borderRadius: 18, padding: "18px 16px", textAlign: "left", border: "none", cursor: "pointer", boxShadow: "0 2px 12px rgba(27,67,50,0.2)", transition: "transform 0.15s" }}
-            onPointerDown={e => e.currentTarget.style.transform = "scale(0.96)"}
-            onPointerUp={e => e.currentTarget.style.transform = "scale(1)"}>
-            <div style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 10 }}>📝</div>
-            <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "rgba(255,255,255,0.55)", margin: "0 0 2px" }}>Constructor</p>
-            <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 18, color: "white", margin: 0, fontWeight: 400 }}>Plantillas</p>
-          </button>
-        </div>
-      </div>
-
-      {/* Bottom nav */}
-      <BottomNav active="home" onNavigate={onNavigate} historialCount={todayRecords.length} />
-    </div>
-  );
-}
-
-// ─── BOTTOM NAV ────────────────────────────────────────────────────────────────
-function BottomNav({ active, onNavigate, historialCount = 0 }) {
-  const items = [
-    { id: "home", icon: "⌂", label: "Inicio" },
-    { id: "plantillas", icon: "📝", label: "Plantillas" },
-    { id: "qr", icon: "▣", label: "QR" },
-    { id: "historial", icon: "☰", label: "Historial", badge: historialCount },
-  ];
-  return (
-    <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "white", borderTop: "1px solid rgba(0,0,0,0.08)", padding: "10px 0 20px", display: "flex", justifyContent: "space-around", zIndex: 50, boxShadow: "0 -4px 20px rgba(0,0,0,0.06)" }}>
-      {items.map(item => (
-        <button key={item.id} onClick={() => onNavigate(item.id)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 16px", position: "relative" }}>
-          {item.badge > 0 && (
-            <div style={{ position: "absolute", top: -2, right: 8, background: "#2d6a4f", borderRadius: 8, padding: "1px 5px", fontFamily: "'Montserrat', sans-serif", fontSize: 9, fontWeight: 700, color: "white" }}>{item.badge}</div>
-          )}
-          <span style={{ fontSize: 20, opacity: active === item.id ? 1 : 0.35 }}>{item.icon}</span>
-          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, fontWeight: active === item.id ? 700 : 400, color: active === item.id ? "#1b4332" : "#999", letterSpacing: "0.05em" }}>{item.label.toUpperCase()}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// ─── AGUA NORMS ────────────────────────────────────────────────────────────────
-const AGUA_PARAMS = [
-  { id: "ph", label: "pH", unit: "", min: 6.5, max: 8.5, norm: "Ley 25.688" },
-  { id: "turbidez", label: "Turbidez", unit: "NTU", min: 0, max: 5, norm: "Res. SAyDS 97/2001" },
-  { id: "oxigeno", label: "Oxígeno disuelto", unit: "mg/L", min: 5, max: 20, norm: "Ley 25.688" },
-  { id: "conductividad", label: "Conductividad", unit: "µS/cm", min: 0, max: 1500, norm: "Res. SAyDS 97/2001" },
-  { id: "temp", label: "Temperatura", unit: "°C", min: 0, max: 30, norm: "Ley 25.688" },
-];
-const AIRE_PARAMS = [
-  { id: "pm25", label: "PM 2.5", unit: "µg/m³", min: 0, max: 25, norm: "Ley 20.284" },
-  { id: "pm10", label: "PM 10", unit: "µg/m³", min: 0, max: 50, norm: "Ley 20.284" },
-  { id: "ruido", label: "Ruido", unit: "dB", min: 0, max: 65, norm: "Res. MAyDS 91/2003" },
-  { id: "co", label: "CO", unit: "ppm", min: 0, max: 9, norm: "Ley 20.284" },
-];
-const SUELO_PARAMS = [
-  { id: "ph_suelo", label: "pH del suelo", unit: "", min: 5.5, max: 8, norm: "Ley 24.051" },
-  { id: "cobertura", label: "Cobertura vegetal", unit: "%", min: 30, max: 100, norm: "Ley 22.351" },
-  { id: "erosion", label: "Erosión", unit: "nivel 1-5", min: 0, max: 2, norm: "Ley 22.428" },
-  { id: "compactacion", label: "Compactación", unit: "MPa", min: 0, max: 2, norm: "Ley 24.051" },
-];
-
-// ─── MONITORING FORM ──────────────────────────────────────────────────────────
-function MonitoringForm({ type, user, project, onDone }) {
-  const configs = { agua: { label: "Agua", icon: "💧", color: "#1a5276", params: AGUA_PARAMS }, aire: { label: "Aire", icon: "💨", color: "#4a235a", params: AIRE_PARAMS }, suelo: { label: "Suelo", icon: "🌱", color: "#784212", params: SUELO_PARAMS } };
-  const cfg = configs[type];
-  const [values, setValues] = useState({});
-  const [lugar, setLugar] = useState("");
-  const [obs, setObs] = useState("");
-  const [saved, setSaved] = useState(false);
-
-  const alertas = cfg.params.filter(p => {
-    const v = parseFloat(values[p.id]);
-    return !isNaN(v) && (v < p.min || v > p.max);
-  });
-
-  const handleSave = () => {
-    saveRecord(type, { tipo: cfg.label, lugar, valores: values, observaciones: obs, alertas: alertas.map(a => a.label) }, user, project);
-    setSaved(true);
-  };
-
-  if (saved) return (
-    <div style={{ minHeight: "100vh", background: "#f0faf4", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
-      <div style={{ fontSize: 60, marginBottom: 16 }}>✅</div>
-      <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 28, color: "#1b4332", margin: "0 0 8px" }}>Registro guardado</h2>
-      {alertas.length > 0 && <div style={{ background: "#fef3cd", border: "1px solid #f59e0b", borderRadius: 14, padding: "12px 16px", margin: "12px 0", maxWidth: 320 }}>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, fontWeight: 700, color: "#92400e", margin: "0 0 6px" }}>⚠️ {alertas.length} alerta{alertas.length > 1 ? "s" : ""} detectada{alertas.length > 1 ? "s" : ""}</p>
-        {alertas.map(a => <p key={a.id} style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "#92400e", margin: "2px 0" }}>{a.label} fuera de norma ({a.norm})</p>)}
-      </div>}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", maxWidth: 300, marginTop: 20 }}>
-        <button onClick={() => { setValues({}); setLugar(""); setObs(""); setSaved(false); }} style={{ padding: 14, background: `linear-gradient(135deg,${cfg.color},rgba(82,183,136,0.8))`, border: "none", borderRadius: 14, color: "white", fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Nuevo registro {cfg.icon}</button>
-        <button onClick={onDone} style={{ padding: 14, background: "rgba(27,67,50,0.08)", border: "1px solid rgba(27,67,50,0.12)", borderRadius: 14, color: "#1b4332", fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>← Volver al inicio</button>
-      </div>
-    </div>
-  );
-
-  return (
-    <div style={{ minHeight: "100vh", background: "#f0faf4", paddingBottom: 30 }}>
-      <div style={{ background: `linear-gradient(135deg,${cfg.color},rgba(82,183,136,0.6))`, padding: "50px 20px 24px" }}>
-        <button onClick={onDone} style={{ background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 10, padding: "6px 12px", color: "white", fontFamily: "'Montserrat', sans-serif", fontSize: 12, cursor: "pointer", marginBottom: 16 }}>← Volver</button>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, letterSpacing: "0.2em", color: "rgba(255,255,255,0.6)", margin: "0 0 4px" }}>MONITOREO</p>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 32, fontWeight: 400, color: "white", margin: 0 }}>{cfg.icon} {cfg.label}</h1>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "rgba(255,255,255,0.5)", margin: "4px 0 0" }}>{project.name} · {user.name}</p>
-      </div>
-      <div style={{ padding: "20px 16px" }}>
-        <input value={lugar} onChange={e => setLugar(e.target.value)} placeholder="Lugar / punto de muestreo *" style={{ width: "100%", padding: "14px 16px", background: "white", border: "1.5px solid rgba(0,0,0,0.1)", borderRadius: 12, fontFamily: "'Montserrat', sans-serif", fontSize: 14, outline: "none", marginBottom: 16, boxSizing: "border-box" }} />
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, letterSpacing: "0.15em", color: "#74c69d", margin: "0 0 12px" }}>PARÁMETROS</p>
-        {cfg.params.map(p => {
-          const v = parseFloat(values[p.id]);
-          const outOfRange = !isNaN(v) && (v < p.min || v > p.max);
-          return (
-            <div key={p.id} style={{ background: "white", borderRadius: 16, padding: "16px", marginBottom: 10, border: outOfRange ? "1.5px solid #f59e0b" : "1.5px solid rgba(0,0,0,0.06)", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <div>
-                  <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, fontWeight: 600, color: "#1b4332", margin: 0 }}>{p.label}</p>
-                  <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, color: "#999", margin: "2px 0 0" }}>Norma: {p.norm} · Límite: {p.min}–{p.max} {p.unit}</p>
-                </div>
-                {outOfRange && <span style={{ background: "#fef3cd", color: "#92400e", borderRadius: 8, padding: "3px 8px", fontFamily: "'Montserrat', sans-serif", fontSize: 10, fontWeight: 700 }}>⚠️ Alerta</span>}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <input type="number" value={values[p.id] || ""} onChange={e => setValues({ ...values, [p.id]: e.target.value })} placeholder="0.00" style={{ flex: 1, padding: "12px 14px", background: "#f8faf9", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 10, fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, outline: "none", color: "#1b4332" }} />
-                {p.unit && <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: "#888", minWidth: 40 }}>{p.unit}</span>}
-              </div>
-            </div>
-          );
-        })}
-        <textarea value={obs} onChange={e => setObs(e.target.value)} placeholder="Observaciones (opcional)" rows={3} style={{ width: "100%", padding: "14px 16px", background: "white", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 14, fontFamily: "'Montserrat', sans-serif", fontSize: 13, outline: "none", marginTop: 6, resize: "none", boxSizing: "border-box" }} />
-        <button onClick={handleSave} disabled={!lugar} style={{ width: "100%", marginTop: 16, padding: "16px", background: lugar ? `linear-gradient(135deg,${cfg.color},rgba(82,183,136,0.8))` : "#ddd", border: "none", borderRadius: 16, color: "white", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 16, cursor: lugar ? "pointer" : "default" }}>
-          Guardar registro {cfg.icon}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── SURVEY FORM ───────────────────────────────────────────────────────────────
-let templates = [
-  { id: "t1", name: "Encuesta - Los Molles", community: "Los Molles", locked: false, version: 1, questions: [
-    { id: "q1", type: "texto", text: "¿Cuál es su nombre completo?", required: false },
-    { id: "q2", type: "unica", text: "¿Cuál es su actividad principal?", required: true, options: ["Agricultura", "Ganadería", "Minería", "Comercio", "Otra"] },
-    { id: "q3", type: "multiple", text: "¿Con qué servicios cuenta su hogar?", required: false, options: ["Agua corriente", "Gas natural", "Electricidad", "Internet"] },
-    { id: "q4", type: "sino", text: "¿Conoce las actividades mineras en la zona?", required: true },
-    { id: "q5", type: "numero", text: "¿Cuántas personas viven en el hogar?", required: true },
-  ]},
-];
-let templateIdCounter = 10;
-let questionIdCounter = 100;
-
-function SurveyForm({ user, project, onDone }) {
-  const [step, setStep] = useState("select");
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
-  const [answers, setAnswers] = useState({});
-  const [currentQ, setCurrentQ] = useState(0);
-  const [saved, setSaved] = useState(false);
-
-  const handleAnswer = (qid, value) => setAnswers({ ...answers, [qid]: value });
-
-  const handleSave = () => {
-    saveRecord("encuesta", { comunidad: selectedTemplate.community, plantilla: selectedTemplate.name, respuestas: answers, alertas: [] }, user, project);
-    setSaved(true);
-  };
-
-  if (step === "select") return (
-    <div style={{ minHeight: "100vh", background: "#f0faf4", paddingBottom: 30 }}>
-      <div style={{ background: "linear-gradient(135deg,#1b4332,#2d6a4f)", padding: "50px 20px 24px" }}>
-        <button onClick={onDone} style={{ background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 10, padding: "6px 12px", color: "white", fontFamily: "'Montserrat', sans-serif", fontSize: 12, cursor: "pointer", marginBottom: 16 }}>← Volver</button>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 30, fontWeight: 400, color: "white", margin: 0 }}>📋 Encuesta Social</h1>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "rgba(255,255,255,0.5)", margin: "4px 0 0" }}>Elegí la plantilla de la comunidad</p>
-      </div>
-      <div style={{ padding: "20px 16px" }}>
-        {templates.map(t => (
-          <button key={t.id} onClick={() => { setSelectedTemplate(t); setStep("form"); }} style={{ width: "100%", background: "white", border: "1.5px solid rgba(0,0,0,0.06)", borderRadius: 18, padding: "18px 20px", textAlign: "left", cursor: "pointer", marginBottom: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
-            <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, color: "#74c69d", margin: "0 0 4px", letterSpacing: "0.1em" }}>{t.locked ? "🔒 BLOQUEADO" : `v${t.version}`}</p>
-            <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 20, color: "#1b4332", margin: "0 0 4px" }}>{t.name}</p>
-            <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "#999", margin: 0 }}>{t.questions.length} preguntas</p>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  const q = selectedTemplate.questions;
-  const cq = q[currentQ];
-
-  if (saved) return (
-    <div style={{ minHeight: "100vh", background: "#f0faf4", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
-      <div style={{ fontSize: 60, marginBottom: 16 }}>✅</div>
-      <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 28, color: "#1b4332", margin: "0 0 8px" }}>Encuesta guardada</h2>
-      <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, color: "#666", margin: "0 0 24px" }}>{selectedTemplate.community}</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", maxWidth: 280 }}>
-        <button onClick={() => { setAnswers({}); setCurrentQ(0); setSaved(false); setStep("select"); }} style={{ padding: 14, background: "linear-gradient(135deg,#1b4332,#2d6a4f)", border: "none", borderRadius: 14, color: "white", fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Nueva encuesta 📋</button>
-        <button onClick={onDone} style={{ padding: 14, background: "rgba(27,67,50,0.08)", border: "1px solid rgba(27,67,50,0.12)", borderRadius: 14, color: "#1b4332", fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>← Inicio</button>
-      </div>
-    </div>
-  );
-
-  return (
-    <div style={{ minHeight: "100vh", background: "#f0faf4" }}>
-      <div style={{ background: "linear-gradient(135deg,#1b4332,#2d6a4f)", padding: "50px 20px 20px" }}>
-        <button onClick={() => currentQ === 0 ? setStep("select") : setCurrentQ(currentQ - 1)} style={{ background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 10, padding: "6px 12px", color: "white", fontFamily: "'Montserrat', sans-serif", fontSize: 12, cursor: "pointer", marginBottom: 16 }}>← {currentQ === 0 ? "Plantillas" : "Anterior"}</button>
-        <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
-          {q.map((_, i) => <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= currentQ ? "#52b788" : "rgba(255,255,255,0.2)" }} />)}
-        </div>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, color: "rgba(255,255,255,0.55)", margin: "0 0 4px" }}>{currentQ + 1} de {q.length} · {selectedTemplate.community}</p>
-        <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 26, fontWeight: 400, color: "white", margin: 0 }}>{cq.text}</h2>
-        {cq.required && <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, color: "#f59e0b", margin: "6px 0 0" }}>* Obligatoria</p>}
-      </div>
-      <div style={{ padding: "24px 16px" }}>
-        {cq.type === "texto" && <textarea value={answers[cq.id] || ""} onChange={e => handleAnswer(cq.id, e.target.value)} placeholder="Escribí tu respuesta..." rows={4} style={{ width: "100%", padding: "16px", background: "white", border: "1.5px solid rgba(0,0,0,0.1)", borderRadius: 16, fontFamily: "'Montserrat', sans-serif", fontSize: 15, outline: "none", resize: "none", boxSizing: "border-box" }} />}
-        {cq.type === "numero" && <input type="number" value={answers[cq.id] || ""} onChange={e => handleAnswer(cq.id, e.target.value)} placeholder="0" style={{ width: "100%", padding: "20px 16px", background: "white", border: "1.5px solid rgba(0,0,0,0.1)", borderRadius: 16, fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 36, outline: "none", textAlign: "center", boxSizing: "border-box" }} />}
-        {cq.type === "sino" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {["Sí", "No"].map(opt => (
-              <button key={opt} onClick={() => handleAnswer(cq.id, opt)} style={{ padding: "24px", background: answers[cq.id] === opt ? "#1b4332" : "white", border: `2px solid ${answers[cq.id] === opt ? "#1b4332" : "rgba(0,0,0,0.1)"}`, borderRadius: 18, fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 28, color: answers[cq.id] === opt ? "white" : "#1b4332", cursor: "pointer" }}>{opt}</button>
-            ))}
-          </div>
-        )}
-        {(cq.type === "unica" || cq.type === "multiple") && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {cq.options.map(opt => {
-              const sel = cq.type === "unica" ? answers[cq.id] === opt : (answers[cq.id] || []).includes(opt);
-              return (
-                <button key={opt} onClick={() => {
-                  if (cq.type === "unica") handleAnswer(cq.id, opt);
-                  else { const arr = answers[cq.id] || []; handleAnswer(cq.id, sel ? arr.filter(x => x !== opt) : [...arr, opt]); }
-                }} style={{ padding: "16px 20px", background: sel ? "#1b4332" : "white", border: `2px solid ${sel ? "#1b4332" : "rgba(0,0,0,0.1)"}`, borderRadius: 14, textAlign: "left", fontFamily: "'Montserrat', sans-serif", fontSize: 14, color: sel ? "white" : "#333", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ width: 20, height: 20, borderRadius: cq.type === "unica" ? "50%" : 6, border: `2px solid ${sel ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.2)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, flexShrink: 0, color: "white", background: sel ? "rgba(255,255,255,0.2)" : "transparent" }}>{sel ? "✓" : ""}</span>
-                  {opt}
-                </button>
-              );
-            })}
-          </div>
-        )}
-        <div style={{ marginTop: 24 }}>
-          {currentQ < q.length - 1 ? (
-            <button onClick={() => setCurrentQ(currentQ + 1)} disabled={cq.required && !answers[cq.id]} style={{ width: "100%", padding: "16px", background: (cq.required && !answers[cq.id]) ? "#ddd" : "linear-gradient(135deg,#1b4332,#2d6a4f)", border: "none", borderRadius: 16, color: "white", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 16, cursor: (cq.required && !answers[cq.id]) ? "default" : "pointer" }}>Siguiente →</button>
-          ) : (
-            <button onClick={handleSave} style={{ width: "100%", padding: "16px", background: "linear-gradient(135deg,#1b4332,#52b788)", border: "none", borderRadius: 16, color: "white", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 16, cursor: "pointer" }}>✅ Guardar encuesta</button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── CENSUS FORM ───────────────────────────────────────────────────────────────
-function CensoForm({ user, project, onDone }) {
-  const [data, setData] = useState({ nombre: "", apellido: "", edad: "", genero: "", actividad: "", servicios: [], observaciones: "" });
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = () => {
-    saveRecord("censo", { ...data, alertas: [] }, user, project);
-    setSaved(true);
-  };
-
-  if (saved) return (
-    <div style={{ minHeight: "100vh", background: "#f0faf4", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
-      <div style={{ fontSize: 60, marginBottom: 16 }}>✅</div>
-      <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 28, color: "#1b4332", margin: "0 0 8px" }}>Registro guardado</h2>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", maxWidth: 280, marginTop: 20 }}>
-        <button onClick={() => { setData({ nombre: "", apellido: "", edad: "", genero: "", actividad: "", servicios: [], observaciones: "" }); setSaved(false); }} style={{ padding: 14, background: "linear-gradient(135deg,#1e5f44,#2d6a4f)", border: "none", borderRadius: 14, color: "white", fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Nuevo registro 🏘</button>
-        <button onClick={onDone} style={{ padding: 14, background: "rgba(27,67,50,0.08)", border: "1px solid rgba(27,67,50,0.12)", borderRadius: 14, color: "#1b4332", fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>← Inicio</button>
-      </div>
-    </div>
-  );
-
-  const toggleServicio = (s) => {
-    const arr = data.servicios.includes(s) ? data.servicios.filter(x => x !== s) : [...data.servicios, s];
-    setData({ ...data, servicios: arr });
-  };
-
-  return (
-    <div style={{ minHeight: "100vh", background: "#f0faf4", paddingBottom: 30 }}>
-      <div style={{ background: "linear-gradient(135deg,#1e5f44,#2d6a4f)", padding: "50px 20px 24px" }}>
-        <button onClick={onDone} style={{ background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 10, padding: "6px 12px", color: "white", fontFamily: "'Montserrat', sans-serif", fontSize: 12, cursor: "pointer", marginBottom: 16 }}>← Volver</button>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 30, fontWeight: 400, color: "white", margin: 0 }}>🏘 Censo Comunitario</h1>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "rgba(255,255,255,0.5)", margin: "4px 0 0" }}>Datos opcionales — protegidos por Ley 25.326</p>
-      </div>
-      <div style={{ padding: "20px 16px" }}>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.2em", color: "#74c69d", margin: "0 0 10px" }}>DATOS DEL HOGAR (OPCIONALES)</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-          <input value={data.nombre} onChange={e => setData({ ...data, nombre: e.target.value })} placeholder="Nombre" style={{ padding: "12px 14px", background: "white", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 12, fontFamily: "'Montserrat', sans-serif", fontSize: 14, outline: "none" }} />
-          <input value={data.apellido} onChange={e => setData({ ...data, apellido: e.target.value })} placeholder="Apellido" style={{ padding: "12px 14px", background: "white", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 12, fontFamily: "'Montserrat', sans-serif", fontSize: 14, outline: "none" }} />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-          <input type="number" value={data.edad} onChange={e => setData({ ...data, edad: e.target.value })} placeholder="Edad" style={{ padding: "12px 14px", background: "white", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 12, fontFamily: "'Montserrat', sans-serif", fontSize: 14, outline: "none" }} />
-          <select value={data.genero} onChange={e => setData({ ...data, genero: e.target.value })} style={{ padding: "12px 14px", background: "white", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 12, fontFamily: "'Montserrat', sans-serif", fontSize: 14, outline: "none", color: data.genero ? "#333" : "#aaa" }}>
-            <option value="">Género</option>
-            <option>Masculino</option><option>Femenino</option><option>Otro</option><option>Prefiero no decir</option>
-          </select>
-        </div>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.2em", color: "#74c69d", margin: "16px 0 10px" }}>ACTIVIDAD PRINCIPAL</p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-          {["Agricultura", "Ganadería", "Minería", "Comercio", "Educación", "Otra"].map(a => (
-            <button key={a} onClick={() => setData({ ...data, actividad: a })} style={{ padding: "8px 14px", background: data.actividad === a ? "#1b4332" : "white", border: `1.5px solid ${data.actividad === a ? "#1b4332" : "rgba(0,0,0,0.1)"}`, borderRadius: 20, fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: data.actividad === a ? "white" : "#555", cursor: "pointer" }}>{a}</button>
-          ))}
-        </div>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.2em", color: "#74c69d", margin: "0 0 10px" }}>SERVICIOS DEL HOGAR</p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-          {["Agua corriente", "Gas natural", "Electricidad", "Internet", "Saneamiento"].map(s => (
-            <button key={s} onClick={() => toggleServicio(s)} style={{ padding: "8px 14px", background: data.servicios.includes(s) ? "#1b4332" : "white", border: `1.5px solid ${data.servicios.includes(s) ? "#1b4332" : "rgba(0,0,0,0.1)"}`, borderRadius: 20, fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: data.servicios.includes(s) ? "white" : "#555", cursor: "pointer" }}>{s}</button>
-          ))}
-        </div>
-        <textarea value={data.observaciones} onChange={e => setData({ ...data, observaciones: e.target.value })} placeholder="Observaciones (opcional)" rows={3} style={{ width: "100%", padding: "14px 16px", background: "white", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 14, fontFamily: "'Montserrat', sans-serif", fontSize: 13, outline: "none", resize: "none", marginBottom: 16, boxSizing: "border-box" }} />
-        <button onClick={handleSave} style={{ width: "100%", padding: "16px", background: "linear-gradient(135deg,#1e5f44,#2d6a4f)", border: "none", borderRadius: 16, color: "white", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 16, cursor: "pointer" }}>✅ Guardar registro</button>
-      </div>
-    </div>
-  );
-}
-
-// ─── HISTORIAL ─────────────────────────────────────────────────────────────────
-function Historial({ project, onDone }) {
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
-  const todayRecs = getTodayRecords(project.id);
-  const typeIcons = { encuesta: "📋", censo: "🏘", agua: "💧", aire: "💨", suelo: "🌱" };
-  const typeLabels = { encuesta: "Encuesta Social", censo: "Censo", agua: "Monitoreo Agua", aire: "Monitoreo Aire", suelo: "Monitoreo Suelo" };
-
-  const filtered = todayRecs.filter(r => {
-    const matchesFilter = filter === "all" || r.type === filter;
-    const matchesSearch = !search || JSON.stringify(r.data).toLowerCase().includes(search.toLowerCase());
-    return matchesFilter && matchesSearch;
-  }).reverse();
-
-  return (
-    <div style={{ minHeight: "100vh", background: "#f0faf4", paddingBottom: 90 }}>
-      <div style={{ background: "linear-gradient(135deg,#1b4332,#2d6a4f)", padding: "50px 20px 20px" }}>
-        <button onClick={onDone} style={{ background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 10, padding: "6px 12px", color: "white", fontFamily: "'Montserrat', sans-serif", fontSize: 12, cursor: "pointer", marginBottom: 16 }}>← Volver</button>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 30, fontWeight: 400, color: "white", margin: "0 0 16px" }}>Historial de hoy</h1>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Buscar..." style={{ width: "100%", padding: "12px 16px", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 12, color: "white", fontFamily: "'Montserrat', sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
-      </div>
-      <div style={{ padding: "16px" }}>
-        <div style={{ display: "flex", gap: 8, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
-          {[["all", "Todos"], ["encuesta", "📋"], ["censo", "🏘"], ["agua", "💧"], ["aire", "💨"], ["suelo", "🌱"]].map(([id, label]) => (
-            <button key={id} onClick={() => setFilter(id)} style={{ padding: "6px 14px", background: filter === id ? "#1b4332" : "white", border: `1.5px solid ${filter === id ? "#1b4332" : "rgba(0,0,0,0.1)"}`, borderRadius: 20, fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: filter === id ? "white" : "#666", cursor: "pointer", flexShrink: 0 }}>{label}</button>
-          ))}
-        </div>
-        {filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 20px" }}>
-            <p style={{ fontSize: 40, marginBottom: 12 }}>📭</p>
-            <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, color: "#1b4332" }}>Sin registros aún</p>
-            <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: "#999" }}>Los registros del día aparecen acá</p>
-          </div>
-        ) : filtered.map(r => (
-          <div key={r.id} style={{ background: "white", borderRadius: 16, padding: "16px", marginBottom: 10, border: "1.5px solid rgba(0,0,0,0.06)", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div>
-                <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, fontWeight: 700, color: "#1b4332", margin: "0 0 2px" }}>{typeIcons[r.type]} {typeLabels[r.type]}</p>
-                <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "#999", margin: 0 }}>{r.operator} · {new Date(r.timestamp).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}</p>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                {r.data.alertas?.length > 0 && <span style={{ background: "#fef3cd", color: "#92400e", borderRadius: 8, padding: "3px 8px", fontFamily: "'Montserrat', sans-serif", fontSize: 10, fontWeight: 700 }}>⚠️ {r.data.alertas.length}</span>}
-                <span style={{ background: "#d8f3dc", color: "#2d6a4f", borderRadius: 8, padding: "3px 8px", fontFamily: "'Montserrat', sans-serif", fontSize: 10, fontWeight: 700 }}>🟡 Local</span>
-              </div>
-            </div>
-            {r.data.lugar && <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: "#555", margin: "8px 0 0" }}>📍 {r.data.lugar}</p>}
-            {r.data.comunidad && <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: "#555", margin: "8px 0 0" }}>🏘 {r.data.comunidad}</p>}
-          </div>
-        ))}
-      </div>
-      <BottomNav active="historial" onNavigate={id => id === "home" && onDone()} historialCount={todayRecs.length} />
-    </div>
-  );
-}
-
-// ─── PLANTILLAS ────────────────────────────────────────────────────────────────
-function Plantillas({ onDone }) {
-  const [view, setView] = useState("list");
-  const [editing, setEditing] = useState(null);
-  const [newName, setNewName] = useState("");
-  const [newCommunity, setNewCommunity] = useState("");
-  const [, forceUpdate] = useState(0);
-
-  const handleNew = () => {
-    const t = { id: `t${templateIdCounter++}`, name: newName, community: newCommunity, locked: false, version: 1, questions: [] };
-    templates.push(t);
-    setEditing(t);
-    setView("edit");
-    setNewName(""); setNewCommunity("");
-  };
-
-  const addQuestion = (type) => {
-    const q = { id: `q${questionIdCounter++}`, type, text: "Nueva pregunta", required: false, options: type === "unica" || type === "multiple" ? ["Opción 1", "Opción 2"] : undefined };
-    editing.questions.push(q);
-    forceUpdate(n => n + 1);
-  };
-
-  const toggleLock = (t) => { t.locked = !t.locked; if (!t.locked) t.version++; forceUpdate(n => n + 1); };
-
-  if (view === "list") return (
-    <div style={{ minHeight: "100vh", background: "#f0faf4", paddingBottom: 90 }}>
-      <div style={{ background: "linear-gradient(135deg,#1b4332,#2d6a4f)", padding: "50px 20px 24px" }}>
-        <button onClick={onDone} style={{ background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 10, padding: "6px 12px", color: "white", fontFamily: "'Montserrat', sans-serif", fontSize: 12, cursor: "pointer", marginBottom: 16 }}>← Volver</button>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 30, fontWeight: 400, color: "white", margin: 0 }}>📝 Plantillas</h1>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "rgba(255,255,255,0.5)", margin: "4px 0 0" }}>Constructor de formularios por comunidad</p>
-      </div>
-      <div style={{ padding: "20px 16px" }}>
-        <div style={{ background: "white", borderRadius: 16, padding: "16px", marginBottom: 16, border: "1.5px solid rgba(0,0,0,0.06)" }}>
-          <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, letterSpacing: "0.15em", color: "#74c69d", margin: "0 0 12px" }}>NUEVA PLANTILLA</p>
-          <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nombre (ej: Encuesta Los Molles)" style={{ width: "100%", padding: "12px 14px", background: "#f8faf9", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontFamily: "'Montserrat', sans-serif", fontSize: 13, outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
-          <input value={newCommunity} onChange={e => setNewCommunity(e.target.value)} placeholder="Comunidad" style={{ width: "100%", padding: "12px 14px", background: "#f8faf9", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontFamily: "'Montserrat', sans-serif", fontSize: 13, outline: "none", marginBottom: 10, boxSizing: "border-box" }} />
-          <button onClick={handleNew} disabled={!newName || !newCommunity} style={{ width: "100%", padding: "12px", background: newName && newCommunity ? "linear-gradient(135deg,#1b4332,#2d6a4f)" : "#ddd", border: "none", borderRadius: 12, color: "white", fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: 14, cursor: newName && newCommunity ? "pointer" : "default" }}>+ Crear plantilla</button>
-        </div>
-        {templates.map(t => (
-          <div key={t.id} style={{ background: "white", borderRadius: 16, padding: "16px", marginBottom: 10, border: "1.5px solid rgba(0,0,0,0.06)", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-              <div>
-                <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, color: t.locked ? "#f59e0b" : "#74c69d", margin: "0 0 2px", fontWeight: 700 }}>{t.locked ? "🔒 BLOQUEADO · v" : "✏️ EDITABLE · v"}{t.version}</p>
-                <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 20, color: "#1b4332", margin: "0 0 2px" }}>{t.name}</p>
-                <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "#999", margin: 0 }}>{t.questions.length} preguntas · {t.community}</p>
-              </div>
-              <button onClick={() => toggleLock(t)} style={{ background: t.locked ? "#fef3cd" : "#d8f3dc", border: "none", borderRadius: 10, padding: "6px 10px", fontFamily: "'Montserrat', sans-serif", fontSize: 11, fontWeight: 700, color: t.locked ? "#92400e" : "#1b4332", cursor: "pointer" }}>
-                {t.locked ? "🔓 Desbloquear" : "🔒 Bloquear"}
-              </button>
-            </div>
-            {!t.locked && <button onClick={() => { setEditing(t); setView("edit"); }} style={{ width: "100%", padding: "10px", background: "rgba(27,67,50,0.06)", border: "1px solid rgba(27,67,50,0.1)", borderRadius: 10, fontFamily: "'Montserrat', sans-serif", fontSize: 13, color: "#1b4332", cursor: "pointer", fontWeight: 600 }}>Editar preguntas →</button>}
-          </div>
-        ))}
-      </div>
-      <BottomNav active="plantillas" onNavigate={id => id === "home" && onDone()} />
-    </div>
-  );
-
-  // Edit view
-  const qTypes = [{ id: "texto", label: "Texto libre" }, { id: "numero", label: "Número" }, { id: "unica", label: "Opción única" }, { id: "multiple", label: "Múltiple" }, { id: "sino", label: "Sí / No" }];
-  return (
-    <div style={{ minHeight: "100vh", background: "#f0faf4", paddingBottom: 30 }}>
-      <div style={{ background: "linear-gradient(135deg,#1b4332,#2d6a4f)", padding: "50px 20px 24px" }}>
-        <button onClick={() => setView("list")} style={{ background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 10, padding: "6px 12px", color: "white", fontFamily: "'Montserrat', sans-serif", fontSize: 12, cursor: "pointer", marginBottom: 16 }}>← Plantillas</button>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 24, fontWeight: 400, color: "white", margin: 0 }}>✏️ {editing.name}</h1>
-      </div>
-      <div style={{ padding: "16px" }}>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, letterSpacing: "0.15em", color: "#74c69d", margin: "0 0 10px" }}>AGREGAR PREGUNTA</p>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-          {qTypes.map(qt => (
-            <button key={qt.id} onClick={() => addQuestion(qt.id)} style={{ padding: "8px 14px", background: "white", border: "1.5px solid rgba(27,67,50,0.2)", borderRadius: 20, fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: "#1b4332", cursor: "pointer", fontWeight: 600 }}>+ {qt.label}</button>
-          ))}
-        </div>
-        {editing.questions.map((q, i) => (
-          <div key={q.id} style={{ background: "white", borderRadius: 16, padding: "14px", marginBottom: 10, border: "1.5px solid rgba(0,0,0,0.06)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, fontWeight: 700, color: "#74c69d", background: "#d8f3dc", padding: "3px 8px", borderRadius: 8 }}>{q.type.toUpperCase()}</span>
-              <button onClick={() => { editing.questions.splice(i, 1); forceUpdate(n => n + 1); }} style={{ background: "#fde8e8", border: "none", borderRadius: 8, padding: "4px 8px", color: "#c0392b", fontFamily: "'Montserrat', sans-serif", fontSize: 11, cursor: "pointer" }}>✕</button>
-            </div>
-            <input value={q.text} onChange={e => { q.text = e.target.value; forceUpdate(n => n + 1); }} style={{ width: "100%", padding: "10px 12px", background: "#f8faf9", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontFamily: "'Montserrat', sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
-            {(q.type === "unica" || q.type === "multiple") && (
-              <div style={{ marginTop: 8 }}>
-                {q.options.map((opt, oi) => (
-                  <div key={oi} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-                    <input value={opt} onChange={e => { q.options[oi] = e.target.value; forceUpdate(n => n + 1); }} style={{ flex: 1, padding: "8px 10px", background: "#f8faf9", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 8, fontFamily: "'Montserrat', sans-serif", fontSize: 12, outline: "none" }} />
-                    <button onClick={() => { q.options.splice(oi, 1); forceUpdate(n => n + 1); }} style={{ background: "none", border: "none", color: "#ccc", cursor: "pointer", fontSize: 16 }}>✕</button>
-                  </div>
-                ))}
-                <button onClick={() => { q.options.push("Nueva opción"); forceUpdate(n => n + 1); }} style={{ background: "none", border: "1px dashed rgba(0,0,0,0.15)", borderRadius: 8, padding: "6px 12px", fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "#999", cursor: "pointer" }}>+ Agregar opción</button>
-              </div>
-            )}
-          </div>
-        ))}
-        <button onClick={() => setView("list")} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg,#1b4332,#2d6a4f)", border: "none", borderRadius: 16, color: "white", fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 15, cursor: "pointer", marginTop: 8 }}>✅ Guardar plantilla</button>
-      </div>
-    </div>
-  );
-}
-
-// ─── QR SCREEN ─────────────────────────────────────────────────────────────────
-function QRScreen({ project, onDone }) {
-  const qrData = `https://andina-campo-digital.vercel.app/cliente/${project.id}`;
-  const size = 200;
-  const cellSize = Math.floor(size / 21);
-
-  // Simple QR pattern (visual representation)
-  const pattern = Array.from({ length: 21 }, (_, r) =>
-    Array.from({ length: 21 }, (_, c) => {
-      if ((r < 7 && c < 7) || (r < 7 && c > 13) || (r > 13 && c < 7)) return 1;
-      if (r === 7 || c === 7 || r === 13 || c === 13) return (r + c) % 2;
-      return Math.random() > 0.5 ? 1 : 0;
-    })
-  );
-
-  return (
-    <div style={{ minHeight: "100vh", background: "#f0faf4", paddingBottom: 90 }}>
-      <div style={{ background: "linear-gradient(135deg,#1b4332,#2d6a4f)", padding: "50px 20px 24px" }}>
-        <button onClick={onDone} style={{ background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 10, padding: "6px 12px", color: "white", fontFamily: "'Montserrat', sans-serif", fontSize: 12, cursor: "pointer", marginBottom: 16 }}>← Volver</button>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 30, fontWeight: 400, color: "white", margin: 0 }}>▣ QR Cliente</h1>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "rgba(255,255,255,0.5)", margin: "4px 0 0" }}>Acceso de solo lectura para el cliente</p>
-      </div>
-      <div style={{ padding: "24px 16px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div style={{ background: "white", borderRadius: 24, padding: 24, boxShadow: "0 8px 32px rgba(27,67,50,0.12)", border: "1.5px solid rgba(0,0,0,0.06)", textAlign: "center", maxWidth: 320, width: "100%" }}>
-          <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.2em", color: "#74c69d", margin: "0 0 8px" }}>PROYECTO</p>
-          <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, color: "#1b4332", margin: "0 0 20px" }}>{project.name}</p>
-          <div style={{ background: "#f8faf9", borderRadius: 16, padding: 16, display: "inline-block", border: "1px solid rgba(0,0,0,0.06)" }}>
-            <svg width={cellSize * 21} height={cellSize * 21}>
-              {pattern.map((row, r) => row.map((cell, c) => cell ? (
-                <rect key={`${r}-${c}`} x={c * cellSize} y={r * cellSize} width={cellSize} height={cellSize} fill="#1b4332" />
-              ) : null))}
-            </svg>
-          </div>
-          <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "#999", margin: "16px 0 0", lineHeight: 1.5 }}>El cliente escanea este QR y accede a los datos del proyecto en tiempo real</p>
-          <div style={{ display: "flex", justifyContent: "space-around", marginTop: 16, paddingTop: 16, borderTop: "1px solid rgba(0,0,0,0.06)" }}>
-            <div style={{ textAlign: "center" }}>
-              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, color: "#1b4332", margin: 0 }}>0</p>
-              <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, color: "#999", margin: 0 }}>accesos</p>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, color: "#1b4332", margin: 0 }}>Solo</p>
-              <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, color: "#999", margin: 0 }}>lectura</p>
-            </div>
-          </div>
-        </div>
-        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "#888", marginTop: 20, textAlign: "center", maxWidth: 280, lineHeight: 1.6 }}>
-          Una vez que la app esté publicada en Vercel, el QR va a funcionar con el link real del proyecto.
-        </p>
-      </div>
-      <BottomNav active="qr" onNavigate={id => id === "home" && onDone()} />
-    </div>
-  );
-}
-
-// ─── MAIN APP ──────────────────────────────────────────────────────────────────
-export default function App() {
-  const [screen, setScreen] = useState("splash");
-  const [user, setUser] = useState(null);
-  const [project, setProject] = useState(null);
-
-  const navigate = (to) => setScreen(to);
-
-  if (screen === "splash") return <SplashScreen onDone={() => setScreen("login")} />;
-  if (screen === "login") return <LoginScreen onLogin={u => { setUser(u); setScreen("project"); }} />;
-  if (screen === "project") return <ProjectSelect user={user} onSelect={p => { setProject(p); setScreen("home"); }} />;
-  if (!user || !project) return null;
-
-  if (screen === "home") return <HomeScreen user={user} project={project} onNavigate={navigate} onChangeProject={() => setScreen("project")} />;
-  if (screen === "encuesta") return <SurveyForm user={user} project={project} onDone={() => setScreen("home")} />;
-  if (screen === "censo") return <CensoForm user={user} project={project} onDone={() => setScreen("home")} />;
-  if (screen === "agua") return <MonitoringForm type="agua" user={user} project={project} onDone={() => setScreen("home")} />;
-  if (screen === "aire") return <MonitoringForm type="aire" user={user} project={project} onDone={() => setScreen("home")} />;
-  if (screen === "suelo") return <MonitoringForm type="suelo" user={user} project={project} onDone={() => setScreen("home")} />;
-  if (screen === "historial") return <Historial project={project} onDone={() => setScreen("home")} />;
-  if (screen === "plantillas") return <Plantillas onDone={() => setScreen("home")} />;
-  if (screen === "qr") return <QRScreen project={project} onDone={() => setScreen("home")} />;
-
-  return <HomeScreen user={user} project={project} onNavigate={navigate} onChangeProject={() => setScreen("project")} />;
 }
