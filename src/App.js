@@ -399,7 +399,9 @@ function Formulario({ tipo, proyecto, user, onGuardar, onBack }) {
 // HISTORIAL
 // ═══════════════════════════════════════════════════════════════
 function Historial({ registros, proyecto }) {
-  const [filtro,setFiltro]=useState("todos"); const [busqueda,setBusqueda]=useState("");
+  const [filtro,setFiltro]=useState("todos");
+  const [busqueda,setBusqueda]=useState("");
+  const [expandido,setExpandido]=useState(null);
   const todos=registros.filter(r=>r.proyectoId===proyecto.id);
   const filtrados=todos.filter(r=>(filtro==="todos"||r.tipo===filtro)&&(!busqueda||JSON.stringify(r).toLowerCase().includes(busqueda.toLowerCase())));
   return (
@@ -422,23 +424,61 @@ function Historial({ registros, proyecto }) {
         {filtrados.length===0&&<div style={{ textAlign:"center",padding:"40px 0" }}><div style={{ fontSize:40,marginBottom:10 }}>📋</div><p style={{ color:"#b7e4c7",fontFamily:"system-ui",fontSize:13 }}>Sin registros{filtro!=="todos"?" de este tipo":""}</p></div>}
         {filtrados.map(r=>{
           const cfg=TIPO_CFG[r.tipo];
+          const abierto=expandido===r.id;
+          const campos=CAMPOS[r.tipo]||[];
           return (
-            <div key={r.id} style={{ background:"white",border:`1.5px solid ${cfg.bg}`,borderRadius:16,padding:"12px 14px",boxShadow:"0 2px 8px rgba(27,67,50,0.05)" }}>
-              <div style={{ display:"flex",alignItems:"flex-start",gap:10 }}>
-                <div style={{ width:36,height:36,borderRadius:10,background:cfg.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0 }}>{cfg.icon}</div>
-                <div style={{ flex:1 }}>
-                  <div style={{ display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3 }}>
-                    <span style={{ background:cfg.bg,color:cfg.color,fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>{cfg.label}</span>
-                    {r.alerta&&<span style={{ background:"#fde8e8",color:"#c0392b",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>🚨 Alerta</span>}
-                    <span style={{ color:"#ccc",fontFamily:"system-ui",fontSize:10 }}>· {r.timestamp}</span>
-                  </div>
-                  <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:"0 0 2px",fontWeight:500 }}>{r.valores?.comunidad||r.valores?.punto||"Sin detalle"}</p>
-                  <div style={{ display:"flex",gap:8 }}>
-                    <span style={{ color:"#aaa",fontFamily:"system-ui",fontSize:10 }}>👤 {r.operador}</span>
-                    <span style={{ color:"#52b788",fontFamily:"system-ui",fontSize:10 }}>✓ Guardado</span>
+            <div key={r.id} style={{ background:"white",border:`1.5px solid ${abierto?cfg.color+"55":cfg.bg}`,borderRadius:16,overflow:"hidden",boxShadow:abierto?"0 4px 16px rgba(27,67,50,0.10)":"0 2px 8px rgba(27,67,50,0.05)",transition:"box-shadow 0.2s" }}>
+              {/* CABECERA — siempre visible, toque para expandir */}
+              <button onClick={()=>setExpandido(abierto?null:r.id)} style={{ width:"100%",background:"none",border:"none",cursor:"pointer",padding:"12px 14px",textAlign:"left" }}>
+                <div style={{ display:"flex",alignItems:"flex-start",gap:10 }}>
+                  <div style={{ width:36,height:36,borderRadius:10,background:cfg.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0 }}>{cfg.icon}</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3 }}>
+                      <span style={{ background:cfg.bg,color:cfg.color,fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>{cfg.label}</span>
+                      {r.alerta&&<span style={{ background:"#fde8e8",color:"#c0392b",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>🚨 Alerta</span>}
+                      <span style={{ color:"#ccc",fontFamily:"system-ui",fontSize:10 }}>· {r.timestamp}</span>
+                    </div>
+                    <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:"0 0 2px",fontWeight:500 }}>{r.valores?.comunidad||r.valores?.punto||"Sin detalle"}</p>
+                    <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                      <div style={{ display:"flex",gap:8 }}>
+                        <span style={{ color:"#aaa",fontFamily:"system-ui",fontSize:10 }}>👤 {r.operador}</span>
+                        <span style={{ color:"#52b788",fontFamily:"system-ui",fontSize:10 }}>✓ Guardado</span>
+                      </div>
+                      <span style={{ color:cfg.color,fontSize:14,transition:"transform 0.2s",display:"inline-block",transform:abierto?"rotate(90deg)":"rotate(0deg)" }}>›</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </button>
+              {/* DETALLE EXPANDIDO */}
+              {abierto&&(
+                <div style={{ borderTop:`1px solid ${cfg.bg}`,padding:"12px 14px",display:"flex",flexDirection:"column",gap:8 }}>
+                  {/* Encabezado del detalle */}
+                  <div style={{ background:cfg.bg,borderRadius:10,padding:"8px 12px",marginBottom:2 }}>
+                    <p style={{ color:cfg.color,fontFamily:"system-ui",fontSize:10,fontWeight:700,margin:"0 0 1px",letterSpacing:"0.1em" }}>📅 FECHA Y HORA</p>
+                    <p style={{ color:cfg.color,fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:15,margin:0 }}>{r.timestamp}</p>
+                  </div>
+                  <div style={{ background:"#f8f8f8",borderRadius:10,padding:"8px 12px",marginBottom:4 }}>
+                    <p style={{ color:"#666",fontFamily:"system-ui",fontSize:10,fontWeight:700,margin:"0 0 1px",letterSpacing:"0.1em" }}>👤 OPERADOR</p>
+                    <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:0,fontWeight:500 }}>{r.operador}</p>
+                  </div>
+                  {/* Campos del registro */}
+                  {campos.filter(c=>r.valores?.[c.id]).map(c=>{
+                    const est=c.nk?checkAlerta(r.tipo,c.nk,r.valores[c.id]):null;
+                    const norm=NORMATIVA[r.tipo]?.[c.nk];
+                    return (
+                      <div key={c.id} style={{ background:est==="critico"?"#fde8e8":est==="alerta"?"#fef3cd":"#fafafa",border:`1px solid ${est==="critico"?"rgba(192,57,43,0.2)":est==="alerta"?"rgba(230,168,23,0.2)":"rgba(0,0,0,0.06)"}`,borderRadius:10,padding:"8px 12px" }}>
+                        <p style={{ color:est==="critico"?"#c0392b":est==="alerta"?"#b7860a":"#888",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.1em",margin:"0 0 2px" }}>{c.label.toUpperCase()}</p>
+                        <p style={{ color:est==="critico"?"#c0392b":"#1a1a1a",fontFamily:"system-ui",fontSize:14,margin:0,fontWeight:est?"700":"400" }}>{r.valores[c.id]}</p>
+                        {est==="critico"&&norm&&<p style={{ color:"#c0392b",fontFamily:"system-ui",fontSize:9,margin:"3px 0 0",fontWeight:700 }}>🔴 Fuera de norma · {norm.norma}</p>}
+                        {est==="alerta"&&norm&&<p style={{ color:"#b7860a",fontFamily:"system-ui",fontSize:9,margin:"3px 0 0",fontWeight:700 }}>🟡 Cerca del límite · {norm.norma}</p>}
+                      </div>
+                    );
+                  })}
+                  {campos.filter(c=>r.valores?.[c.id]).length===0&&(
+                    <p style={{ color:"#bbb",fontFamily:"system-ui",fontSize:12,textAlign:"center",margin:"4px 0" }}>Sin datos cargados</p>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
