@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 
 // ═══════════════════════════════════════════════════════════════
-// LOGO ANDINA — tres montañas misma base, central más alta
+// LOGO ANDINA
 // ═══════════════════════════════════════════════════════════════
 function AndinaLogo({ size = "md", light = false, showSubtitle = true }) {
   const sizes = {
@@ -58,7 +58,7 @@ const PROYECTOS_DEF = [
 ];
 const TIPO_CFG = {
   encuesta: { icon:"📋", label:"Encuesta Social",   color:"#1b4332", bg:"#d8f3dc" },
-  censo:    { icon:"🏘", label:"Censo Comunitario", color:"#2d4a8a", bg:"#dce8ff" },
+  censo:    { icon:"🏘",  label:"Censo Comunitario", color:"#2d4a8a", bg:"#dce8ff" },
   agua:     { icon:"💧", label:"Monitoreo Agua",    color:"#1e6091", bg:"#d0e8f5" },
   aire:     { icon:"💨", label:"Monitoreo Aire",    color:"#5c4a1e", bg:"#f5ead0" },
   suelo:    { icon:"🌱", label:"Monitoreo Suelo",   color:"#4a2c0a", bg:"#f0dfc8" },
@@ -97,15 +97,15 @@ const CAMPOS = {
   aire: [
     { id:"punto",  label:"Punto de muestreo",                ph:"Ej: Acceso principal",   req:true            },
     { id:"pm10",   label:"PM10 (μg/m³)",                     ph:"Ref: < 50",              req:true, num:true, nk:"pm10"  },
-    { id:"pm25",   label:"PM2.5 (μg/m³)",                   ph:"Ref: < 25",              req:false,num:true, nk:"pm25"  },
-    { id:"ruido",  label:"Ruido (dB)",                       ph:"Ref: < 55",              req:true, num:true, nk:"ruido" },
-    { id:"viento", label:"Dirección y velocidad del viento", ph:"Ej: NE 15 km/h",         req:false          },
-    { id:"obs",    label:"Observaciones",                    ph:"Condiciones del sitio…", req:false, area:true},
+    { id:"pm25",   label:"PM2.5 (μg/m³)",                    ph:"Ref: < 25",              req:false,num:true, nk:"pm25"  },
+    { id:"ruido",  label:"Ruido (dB)",                        ph:"Ref: < 55",              req:true, num:true, nk:"ruido" },
+    { id:"viento", label:"Dirección y velocidad del viento",  ph:"Ej: NE 15 km/h",        req:false          },
+    { id:"obs",    label:"Observaciones",                     ph:"Condiciones del sitio…", req:false, area:true},
   ],
   suelo: [
     { id:"punto",         label:"Punto de muestreo",        ph:"Ej: Talud sector B",                   req:true            },
     { id:"ph",            label:"pH suelo",                 ph:"Ref: 6.0–7.5",                         req:true, num:true, nk:"ph"       },
-    { id:"cobertura",     label:"Cobertura vegetal (%)",    ph:"Ref: > 60%",                            req:false,num:true, nk:"cobertura"},
+    { id:"cobertura",     label:"Cobertura vegetal (%)",    ph:"Ref: > 60%",                           req:false,num:true, nk:"cobertura"},
     { id:"erosion",       label:"Erosión",                  ph:"Sin erosión / Leve / Moderada / Severa",req:false          },
     { id:"contaminantes", label:"Contaminantes detectados", ph:"Sin detección / Describir",             req:false          },
     { id:"obs",           label:"Observaciones",            ph:"Condiciones del sitio…",                req:false, area:true},
@@ -120,6 +120,53 @@ function checkAlerta(tipo, key, val) {
   if((r.max&&v>r.max)||(r.min&&v<r.min)) return "critico";
   if((r.max&&v>r.max*0.88)||(r.min&&v<r.min*1.12)) return "alerta";
   return null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CAMPOS COMPARTIDOS — usado en Formulario y EditorRegistro
+// ═══════════════════════════════════════════════════════════════
+function CamposFormulario({ tipo, vals, setVals }) {
+  const cfg=TIPO_CFG[tipo]; const campos=CAMPOS[tipo]||[];
+  const alertasCriticas=campos.filter(c=>c.nk&&checkAlerta(tipo,c.nk,vals[c.id])==="critico").length;
+  return (
+    <>
+      {alertasCriticas>0&&(
+        <div style={{ background:"#fde8e8",border:"1.5px solid rgba(192,57,43,0.2)",borderRadius:14,padding:"10px 14px" }}>
+          <p style={{ color:"#c0392b",fontFamily:"system-ui",fontSize:11,fontWeight:700,margin:0 }}>🚨 {alertasCriticas} parámetro{alertasCriticas>1?"s":""} fuera de norma</p>
+        </div>
+      )}
+      {campos.map(c=>{
+        const est=c.nk?checkAlerta(tipo,c.nk,vals[c.id]):null;
+        const norm=NORMATIVA[tipo]?.[c.nk];
+        return (
+          <div key={c.id}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5 }}>
+              <p style={{ color:cfg.color,fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.12em",margin:0 }}>
+                {c.label.toUpperCase()} {c.req&&<span style={{ color:"#e07070" }}>*</span>}
+              </p>
+              {norm&&<span style={{ background:cfg.bg,color:cfg.color,fontFamily:"system-ui",fontSize:9,padding:"1px 7px",borderRadius:8,opacity:0.8 }}>Ref: {norm.min?`${norm.min}–${norm.max||"∞"}`:`≤ ${norm.max}`}</span>}
+            </div>
+            {c.tipo==="yesno"?(
+              <div style={{ display:"flex",gap:8 }}>
+                {["Sí","No","Parcialmente"].map(o=>(
+                  <button key={o} onClick={()=>setVals(v=>({...v,[c.id]:o}))}
+                    style={{ flex:1,padding:"10px",borderRadius:12,border:`1.5px solid ${vals[c.id]===o?cfg.color:"rgba(0,0,0,0.1)"}`,background:vals[c.id]===o?cfg.color:"white",color:vals[c.id]===o?"white":"#555",fontFamily:"system-ui",fontSize:12,fontWeight:vals[c.id]===o?700:400,cursor:"pointer" }}>{o}</button>
+                ))}
+              </div>
+            ):c.area?(
+              <textarea value={vals[c.id]||""} onChange={e=>setVals(v=>({...v,[c.id]:e.target.value}))} placeholder={c.ph} rows={3}
+                style={{ width:"100%",background:"white",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:12,padding:"11px 14px",fontFamily:"system-ui",fontSize:13,outline:"none",resize:"none",boxSizing:"border-box" }}/>
+            ):(
+              <input type={c.num?"number":"text"} value={vals[c.id]||""} onChange={e=>setVals(v=>({...v,[c.id]:e.target.value}))} placeholder={c.ph}
+                style={{ width:"100%",background:est==="critico"?"#fde8e8":est==="alerta"?"#fef3cd":"white",border:`1.5px solid ${est==="critico"?"#c0392b":est==="alerta"?"#e6a817":vals[c.id]?cfg.color+"55":"rgba(0,0,0,0.1)"}`,borderRadius:12,padding:"11px 14px",fontFamily:"system-ui",fontSize:14,outline:"none",boxSizing:"border-box",color:"#1a1a1a" }}/>
+            )}
+            {est==="critico"&&norm&&<p style={{ color:"#c0392b",fontFamily:"system-ui",fontSize:10,margin:"3px 0 0",fontWeight:700 }}>🔴 Fuera de norma · {norm.norma}</p>}
+            {est==="alerta"&&norm&&<p style={{ color:"#e6a817",fontFamily:"system-ui",fontSize:10,margin:"3px 0 0",fontWeight:700 }}>🟡 Cerca del límite · {norm.norma}</p>}
+          </div>
+        );
+      })}
+    </>
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -141,7 +188,7 @@ function Splash({ onDone }) {
         <div style={{ width:"100%",height:2,background:"rgba(255,255,255,0.07)",borderRadius:2,overflow:"hidden" }}>
           <div style={{ height:"100%",width:ph>=2?"100%":"0%",background:"linear-gradient(90deg,#2d6a4f,#52b788)",transition:"width 1.2s ease",borderRadius:2 }}/>
         </div>
-        <p style={{ color:"rgba(255,255,255,0.2)",fontFamily:"system-ui",fontSize:9,textAlign:"center",marginTop:8,letterSpacing:"0.15em" }}>v1.0</p>
+        <p style={{ color:"rgba(255,255,255,0.2)",fontFamily:"system-ui",fontSize:9,textAlign:"center",marginTop:8,letterSpacing:"0.15em" }}>v3.0</p>
       </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
@@ -191,7 +238,7 @@ function Login({ onLogin }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// INICIO — directo después del login, proyectos en botón ⚙
+// INICIO
 // ═══════════════════════════════════════════════════════════════
 function Inicio({ user, proyecto, registros, online, pendientes, onNav, onVerProyectos, onSincronizar }) {
   const hoy=registros.filter(r=>r.proyectoId===proyecto.id);
@@ -219,7 +266,7 @@ function Inicio({ user, proyecto, registros, online, pendientes, onNav, onVerPro
           <p style={{ color:"white",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:18,margin:0,fontWeight:400 }}>{proyecto.nombre}</p>
           <p style={{ color:"rgba(255,255,255,0.45)",fontFamily:"system-ui",fontSize:11,margin:"3px 0 8px" }}>{proyecto.cliente} · {proyecto.campaña}</p>
           <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
-            <span style={{ background:"rgba(255,255,255,0.12)",color:"white",fontFamily:"system-ui",fontSize:10,padding:"3px 8px",borderRadius:8 }}>📋 {hoy.length} registros hoy</span>
+            <span style={{ background:"rgba(255,255,255,0.12)",color:"white",fontFamily:"system-ui",fontSize:10,padding:"3px 8px",borderRadius:8 }}>📋 {hoy.length} registros</span>
             {alertasHoy>0&&<span style={{ background:"rgba(192,57,43,0.4)",color:"white",fontFamily:"system-ui",fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:8 }}>🚨 {alertasHoy} alerta{alertasHoy>1?"s":""}</span>}
             {!online&&pendientes>0&&<span style={{ background:"rgba(230,168,23,0.4)",color:"white",fontFamily:"system-ui",fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:8 }}>⏳ {pendientes} pend.</span>}
           </div>
@@ -255,13 +302,159 @@ function Inicio({ user, proyecto, registros, online, pendientes, onNav, onVerPro
 }
 
 // ═══════════════════════════════════════════════════════════════
-// DETALLE PROYECTO — registros + info + nuevo registro
+// EDITOR DE REGISTRO — editar o eliminar un registro existente
 // ═══════════════════════════════════════════════════════════════
-function DetalleProyecto({ proyecto, proyectoActivo, registros, onCambiarActivo, onActualizar, onNuevoRegistro, onVolver }) {
-  const [vista,setVista]=useState("registros"); // "registros" | "editar"
+function EditorRegistro({ registro, onGuardar, onEliminar, onVolver }) {
+  const cfg=TIPO_CFG[registro.tipo];
+  const campos=CAMPOS[registro.tipo]||[];
+  const [vals,setVals]=useState({...registro.valores});
+  const [confirmDel,setConfirmDel]=useState(false);
+  const [guardado,setGuardado]=useState(false);
+
+  const alertasCriticas=campos.filter(c=>c.nk&&checkAlerta(registro.tipo,c.nk,vals[c.id])==="critico").length;
+
+  const guardar=()=>{
+    const ad=campos.find(c=>c.nk&&checkAlerta(registro.tipo,c.nk,vals[c.id])==="critico");
+    onGuardar({ ...registro, valores:vals, alerta:ad?{nivel:"critico",campo:ad.label}:null, editado:ahora() });
+    setGuardado(true);
+  };
+
+  if(guardado) return (
+    <div style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(160deg,${cfg.color}18,${cfg.color}06)`,padding:28,gap:14 }}>
+      <div style={{ width:80,height:80,borderRadius:"50%",background:cfg.bg,border:`3px solid ${cfg.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:38 }}>{cfg.icon}</div>
+      <h3 style={{ color:cfg.color,fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:28,fontWeight:400,textAlign:"center",margin:0 }}>¡Cambios guardados!</h3>
+      {alertasCriticas>0&&<span style={{ background:"#fde8e8",color:"#c0392b",fontFamily:"system-ui",fontSize:12,fontWeight:700,padding:"5px 14px",borderRadius:20 }}>🚨 {alertasCriticas} alerta registrada</span>}
+      <div style={{ background:"#d8f3dc",border:"1px solid rgba(45,106,79,0.2)",borderRadius:12,padding:"10px 14px",width:"100%" }}>
+        <p style={{ color:"#2d6a4f",fontFamily:"system-ui",fontSize:11,margin:0,textAlign:"center" }}>✓ Registro actualizado correctamente</p>
+      </div>
+      <button onClick={onVolver} style={{ width:"100%",background:cfg.color,border:"none",borderRadius:14,padding:"14px",color:"white",fontFamily:"system-ui",fontWeight:700,fontSize:14,cursor:"pointer" }}>← Volver</button>
+    </div>
+  );
+
+  return (
+    <div style={{ flex:1,display:"flex",flexDirection:"column",background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
+      {/* HEADER */}
+      <div style={{ padding:"14px 18px 12px",borderBottom:`1.5px solid ${cfg.bg}`,background:"rgba(255,255,255,0.95)",position:"sticky",top:0,zIndex:10,backdropFilter:"blur(12px)" }}>
+        <button onClick={onVolver} style={{ color:cfg.color,fontFamily:"system-ui",fontSize:12,background:"none",border:"none",cursor:"pointer",padding:0,marginBottom:8 }}>‹ Volver</button>
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+          <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+            <div style={{ width:40,height:40,borderRadius:12,background:cfg.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>{cfg.icon}</div>
+            <div>
+              <p style={{ color:cfg.color,fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.15em",margin:0,opacity:0.7 }}>EDITANDO REGISTRO</p>
+              <p style={{ color:cfg.color,fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:17,fontWeight:400,margin:0 }}>{cfg.label}</p>
+            </div>
+          </div>
+          <button onClick={()=>setConfirmDel(true)} style={{ background:"#fde8e8",border:"none",borderRadius:10,padding:"7px 12px",color:"#c0392b",fontFamily:"system-ui",fontSize:11,fontWeight:700,cursor:"pointer" }}>🗑 Eliminar</button>
+        </div>
+        <p style={{ color:"#aaa",fontFamily:"system-ui",fontSize:10,margin:"6px 0 0" }}>
+          📅 {registro.timestamp} · 👤 {registro.operador}
+          {registro.editado&&<span style={{ color:"#856404" }}> · ✏ Editado: {registro.editado}</span>}
+        </p>
+      </div>
+
+      {/* MODAL CONFIRMACIÓN ELIMINAR */}
+      {confirmDel&&(
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:24 }}>
+          <div style={{ background:"white",borderRadius:20,padding:"24px",width:"100%",maxWidth:340,boxShadow:"0 8px 32px rgba(0,0,0,0.2)" }}>
+            <div style={{ textAlign:"center",marginBottom:16 }}>
+              <div style={{ fontSize:40,marginBottom:8 }}>🗑</div>
+              <p style={{ color:"#c0392b",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:400,margin:"0 0 6px" }}>¿Eliminar registro?</p>
+              <p style={{ color:"#888",fontFamily:"system-ui",fontSize:12,margin:0 }}>Esta acción no se puede deshacer.</p>
+            </div>
+            <div style={{ display:"flex",gap:10 }}>
+              <button onClick={()=>setConfirmDel(false)} style={{ flex:1,background:"#f0faf4",border:"1.5px solid rgba(45,106,79,0.2)",borderRadius:12,padding:"12px",color:"#52b788",fontFamily:"system-ui",fontWeight:600,fontSize:13,cursor:"pointer" }}>Cancelar</button>
+              <button onClick={onEliminar} style={{ flex:1,background:"#c0392b",border:"none",borderRadius:12,padding:"12px",color:"white",fontFamily:"system-ui",fontWeight:700,fontSize:13,cursor:"pointer" }}>🗑 Sí, eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ flex:1,overflowY:"auto",padding:"14px 16px",display:"flex",flexDirection:"column",gap:10 }}>
+        <CamposFormulario tipo={registro.tipo} vals={vals} setVals={setVals}/>
+        <div style={{ display:"flex",gap:8,marginTop:4 }}>
+          <button onClick={onVolver} style={{ flex:1,background:"#f0faf4",border:"1.5px solid rgba(45,106,79,0.2)",borderRadius:14,padding:"13px",color:"#52b788",fontFamily:"system-ui",fontWeight:600,fontSize:13,cursor:"pointer" }}>Cancelar</button>
+          <button onClick={guardar} style={{ flex:2,background:`linear-gradient(135deg,${cfg.color},${cfg.color}cc)`,border:"none",borderRadius:14,padding:"13px",color:"white",fontFamily:"system-ui",fontWeight:700,fontSize:14,cursor:"pointer" }}>
+            Guardar cambios {alertasCriticas>0?"⚠️":"✓"}
+          </button>
+        </div>
+        <div style={{ height:16 }}/>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TARJETA DE REGISTRO — expandible con detalle + botón editar
+// ═══════════════════════════════════════════════════════════════
+function TarjetaRegistro({ r, abierto, onToggle, onEditar }) {
+  const cfg=TIPO_CFG[r.tipo];
+  const campos=CAMPOS[r.tipo]||[];
+  return (
+    <div style={{ background:"white",border:`1.5px solid ${abierto?cfg.color+"55":cfg.bg}`,borderRadius:16,overflow:"hidden",boxShadow:abierto?"0 4px 16px rgba(27,67,50,0.10)":"0 2px 8px rgba(27,67,50,0.05)",transition:"box-shadow 0.2s" }}>
+      <button onClick={onToggle} style={{ width:"100%",background:"none",border:"none",cursor:"pointer",padding:"12px 14px",textAlign:"left" }}>
+        <div style={{ display:"flex",alignItems:"flex-start",gap:10 }}>
+          <div style={{ width:36,height:36,borderRadius:10,background:cfg.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0 }}>{cfg.icon}</div>
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3 }}>
+              <span style={{ background:cfg.bg,color:cfg.color,fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>{cfg.label}</span>
+              {r.alerta&&<span style={{ background:"#fde8e8",color:"#c0392b",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>🚨 Alerta</span>}
+              {r.editado&&<span style={{ background:"#fff3cd",color:"#856404",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>✏ Editado</span>}
+              <span style={{ color:"#ccc",fontFamily:"system-ui",fontSize:10 }}>· {r.timestamp}</span>
+            </div>
+            <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:"0 0 2px",fontWeight:500 }}>{r.valores?.comunidad||r.valores?.punto||"Sin detalle"}</p>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+              <div style={{ display:"flex",gap:8 }}>
+                <span style={{ color:"#aaa",fontFamily:"system-ui",fontSize:10 }}>👤 {r.operador}</span>
+                <span style={{ color:"#52b788",fontFamily:"system-ui",fontSize:10 }}>✓ Guardado</span>
+              </div>
+              <span style={{ color:cfg.color,fontSize:14,transition:"transform 0.2s",display:"inline-block",transform:abierto?"rotate(90deg)":"rotate(0deg)" }}>›</span>
+            </div>
+          </div>
+        </div>
+      </button>
+      {abierto&&(
+        <div style={{ borderTop:`1px solid ${cfg.bg}`,padding:"12px 14px",display:"flex",flexDirection:"column",gap:8 }}>
+          <div style={{ background:cfg.bg,borderRadius:10,padding:"8px 12px" }}>
+            <p style={{ color:cfg.color,fontFamily:"system-ui",fontSize:10,fontWeight:700,margin:"0 0 1px",letterSpacing:"0.1em" }}>📅 FECHA Y HORA</p>
+            <p style={{ color:cfg.color,fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:15,margin:0 }}>{r.timestamp}</p>
+          </div>
+          <div style={{ background:"#f8f8f8",borderRadius:10,padding:"8px 12px" }}>
+            <p style={{ color:"#666",fontFamily:"system-ui",fontSize:10,fontWeight:700,margin:"0 0 1px",letterSpacing:"0.1em" }}>👤 OPERADOR</p>
+            <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:0,fontWeight:500 }}>{r.operador}</p>
+          </div>
+          {campos.filter(c=>r.valores?.[c.id]).map(c=>{
+            const est=c.nk?checkAlerta(r.tipo,c.nk,r.valores[c.id]):null;
+            const norm=NORMATIVA[r.tipo]?.[c.nk];
+            return (
+              <div key={c.id} style={{ background:est==="critico"?"#fde8e8":est==="alerta"?"#fef3cd":"#fafafa",border:`1px solid ${est==="critico"?"rgba(192,57,43,0.2)":est==="alerta"?"rgba(230,168,23,0.2)":"rgba(0,0,0,0.06)"}`,borderRadius:10,padding:"8px 12px" }}>
+                <p style={{ color:est==="critico"?"#c0392b":est==="alerta"?"#b7860a":"#888",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.1em",margin:"0 0 2px" }}>{c.label.toUpperCase()}</p>
+                <p style={{ color:est==="critico"?"#c0392b":"#1a1a1a",fontFamily:"system-ui",fontSize:14,margin:0,fontWeight:est?"700":"400" }}>{r.valores[c.id]}</p>
+                {est==="critico"&&norm&&<p style={{ color:"#c0392b",fontFamily:"system-ui",fontSize:9,margin:"3px 0 0",fontWeight:700 }}>🔴 Fuera de norma · {norm.norma}</p>}
+                {est==="alerta"&&norm&&<p style={{ color:"#b7860a",fontFamily:"system-ui",fontSize:9,margin:"3px 0 0",fontWeight:700 }}>🟡 Cerca del límite · {norm.norma}</p>}
+              </div>
+            );
+          })}
+          {campos.filter(c=>r.valores?.[c.id]).length===0&&(
+            <p style={{ color:"#bbb",fontFamily:"system-ui",fontSize:12,textAlign:"center",margin:"4px 0" }}>Sin datos cargados</p>
+          )}
+          <button onClick={onEditar} style={{ width:"100%",background:"rgba(45,106,79,0.07)",border:"1.5px solid rgba(45,106,79,0.18)",borderRadius:12,padding:"10px",color:"#2d6a4f",fontFamily:"system-ui",fontWeight:700,fontSize:13,cursor:"pointer",marginTop:2 }}>
+            ✏ Editar este registro
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DETALLE PROYECTO — registros + stats + edición del proyecto
+// ═══════════════════════════════════════════════════════════════
+function DetalleProyecto({ proyecto, proyectoActivo, registros, onCambiarActivo, onActualizar, onEditarRegistro, onEliminarRegistro, onNuevoRegistro, onVolver }) {
+  const [vista,setVista]=useState("registros");
   const [form,setForm]=useState({nombre:proyecto.nombre,cliente:proyecto.cliente,campaña:proyecto.campaña});
   const [expandido,setExpandido]=useState(null);
   const [filtro,setFiltro]=useState("todos");
+  const [editandoReg,setEditandoReg]=useState(null);
 
   const regs=registros.filter(r=>r.proyectoId===proyecto.id);
   const alertas=regs.filter(r=>r.alerta).length;
@@ -269,6 +462,18 @@ function DetalleProyecto({ proyecto, proyectoActivo, registros, onCambiarActivo,
   const filtrados=regs.filter(r=>filtro==="todos"||r.tipo===filtro);
 
   const guardarEdicion=()=>{ if(!form.nombre.trim()) return; onActualizar(proyecto.id,form); setVista("registros"); };
+
+  // Si estamos editando un registro, mostrar el editor
+  if(editandoReg) {
+    const reg=registros.find(r=>r.id===editandoReg);
+    if(!reg) { setEditandoReg(null); return null; }
+    return <EditorRegistro
+      registro={reg}
+      onGuardar={r=>{ onEditarRegistro(r); setEditandoReg(null); }}
+      onEliminar={()=>{ onEliminarRegistro(editandoReg); setEditandoReg(null); }}
+      onVolver={()=>setEditandoReg(null)}
+    />;
+  }
 
   return (
     <div style={{ flex:1,overflowY:"auto",background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
@@ -285,7 +490,7 @@ function DetalleProyecto({ proyecto, proyectoActivo, registros, onCambiarActivo,
             <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:11,margin:0 }}>{proyecto.cliente} · {proyecto.campaña}</p>
           </div>
         </div>
-        {/* Estadísticas rápidas */}
+        {/* Estadísticas */}
         <div style={{ display:"flex",gap:8,marginBottom:10 }}>
           <div style={{ flex:1,background:"white",borderRadius:12,padding:"8px 10px",textAlign:"center",border:"1px solid rgba(45,106,79,0.08)" }}>
             <p style={{ color:"#1b4332",fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,margin:0 }}>{regs.length}</p>
@@ -300,18 +505,18 @@ function DetalleProyecto({ proyecto, proyectoActivo, registros, onCambiarActivo,
             <p style={{ color:"#74c69d",fontFamily:"system-ui",fontSize:9,margin:0 }}>Tipos</p>
           </div>
         </div>
-        {/* Botones de acción */}
+        {/* Botones */}
         <div style={{ display:"flex",gap:8 }}>
           <button onClick={()=>onNuevoRegistro(proyecto)} style={{ flex:2,background:"linear-gradient(135deg,#1b4332,#2d6a4f)",border:"none",borderRadius:12,padding:"10px",color:"white",fontFamily:"system-ui",fontWeight:700,fontSize:12,cursor:"pointer" }}>+ Nuevo registro</button>
           {proyecto.id!==proyectoActivo.id&&(
             <button onClick={()=>onCambiarActivo(proyecto)} style={{ flex:1,background:"#d8f3dc",border:"none",borderRadius:12,padding:"10px",color:"#2d6a4f",fontFamily:"system-ui",fontWeight:700,fontSize:12,cursor:"pointer" }}>✓ Activar</button>
           )}
-          <button onClick={()=>setVista(v=>v==="editar"?"registros":"editar")} style={{ flex:1,background:"rgba(45,106,79,0.08)",border:"1px solid rgba(45,106,79,0.15)",borderRadius:12,padding:"10px",color:"#52b788",fontFamily:"system-ui",fontWeight:600,fontSize:12,cursor:"pointer" }}>✏ Editar</button>
+          <button onClick={()=>setVista(v=>v==="editar"?"registros":"editar")} style={{ flex:1,background:vista==="editar"?"#1b4332":"rgba(45,106,79,0.08)",border:"1px solid rgba(45,106,79,0.15)",borderRadius:12,padding:"10px",color:vista==="editar"?"white":"#52b788",fontFamily:"system-ui",fontWeight:600,fontSize:12,cursor:"pointer" }}>✏ Editar</button>
         </div>
       </div>
 
       <div style={{ padding:"12px 16px",display:"flex",flexDirection:"column",gap:10 }}>
-        {/* FORMULARIO DE EDICIÓN */}
+        {/* FORMULARIO EDICIÓN DEL PROYECTO */}
         {vista==="editar"&&(
           <div style={{ background:"white",border:"1.5px solid rgba(45,106,79,0.2)",borderRadius:18,padding:"16px",boxShadow:"0 4px 16px rgba(27,67,50,0.08)" }}>
             <p style={{ color:"#52b788",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.15em",margin:"0 0 12px" }}>EDITANDO PROYECTO</p>
@@ -329,7 +534,7 @@ function DetalleProyecto({ proyecto, proyectoActivo, registros, onCambiarActivo,
           </div>
         )}
 
-        {/* FILTROS DE TIPO */}
+        {/* FILTROS */}
         {vista==="registros"&&regs.length>0&&(
           <div style={{ display:"flex",gap:6,overflowX:"auto",paddingBottom:2 }}>
             {[["todos","Todos"],...Object.entries(TIPO_CFG).filter(([k])=>tipos.includes(k)).map(([k,v])=>[k,`${v.icon} ${v.label.split(" ")[0]}`])].map(([id,lbl])=>(
@@ -338,60 +543,19 @@ function DetalleProyecto({ proyecto, proyectoActivo, registros, onCambiarActivo,
           </div>
         )}
 
-        {/* LISTA DE REGISTROS */}
+        {/* LISTA REGISTROS */}
         {vista==="registros"&&(
           filtrados.length===0
             ? <div style={{ textAlign:"center",padding:"40px 0" }}><div style={{ fontSize:40,marginBottom:10 }}>📋</div><p style={{ color:"#b7e4c7",fontFamily:"system-ui",fontSize:13 }}>Sin registros todavía</p><p style={{ color:"#ccc",fontFamily:"system-ui",fontSize:11 }}>Tocá "+ Nuevo registro" para empezar</p></div>
-            : filtrados.map(r=>{
-                const cfg=TIPO_CFG[r.tipo];
-                const abierto=expandido===r.id;
-                const campos=CAMPOS[r.tipo]||[];
-                return (
-                  <div key={r.id} style={{ background:"white",border:`1.5px solid ${abierto?cfg.color+"55":cfg.bg}`,borderRadius:16,overflow:"hidden",boxShadow:abierto?"0 4px 16px rgba(27,67,50,0.10)":"0 2px 8px rgba(27,67,50,0.05)",transition:"box-shadow 0.2s" }}>
-                    <button onClick={()=>setExpandido(abierto?null:r.id)} style={{ width:"100%",background:"none",border:"none",cursor:"pointer",padding:"12px 14px",textAlign:"left" }}>
-                      <div style={{ display:"flex",alignItems:"flex-start",gap:10 }}>
-                        <div style={{ width:36,height:36,borderRadius:10,background:cfg.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0 }}>{cfg.icon}</div>
-                        <div style={{ flex:1 }}>
-                          <div style={{ display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3 }}>
-                            <span style={{ background:cfg.bg,color:cfg.color,fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>{cfg.label}</span>
-                            {r.alerta&&<span style={{ background:"#fde8e8",color:"#c0392b",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>🚨 Alerta</span>}
-                            <span style={{ color:"#ccc",fontFamily:"system-ui",fontSize:10 }}>· {r.timestamp}</span>
-                          </div>
-                          <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:"0 0 2px",fontWeight:500 }}>{r.valores?.comunidad||r.valores?.punto||"Sin detalle"}</p>
-                          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
-                            <span style={{ color:"#aaa",fontFamily:"system-ui",fontSize:10 }}>👤 {r.operador}</span>
-                            <span style={{ color:cfg.color,fontSize:14,transition:"transform 0.2s",display:"inline-block",transform:abierto?"rotate(90deg)":"rotate(0deg)" }}>›</span>
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                    {abierto&&(
-                      <div style={{ borderTop:`1px solid ${cfg.bg}`,padding:"12px 14px",display:"flex",flexDirection:"column",gap:8 }}>
-                        <div style={{ background:cfg.bg,borderRadius:10,padding:"8px 12px" }}>
-                          <p style={{ color:cfg.color,fontFamily:"system-ui",fontSize:10,fontWeight:700,margin:"0 0 1px",letterSpacing:"0.1em" }}>📅 FECHA Y HORA</p>
-                          <p style={{ color:cfg.color,fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:15,margin:0 }}>{r.timestamp}</p>
-                        </div>
-                        <div style={{ background:"#f8f8f8",borderRadius:10,padding:"8px 12px" }}>
-                          <p style={{ color:"#666",fontFamily:"system-ui",fontSize:10,fontWeight:700,margin:"0 0 1px",letterSpacing:"0.1em" }}>👤 OPERADOR</p>
-                          <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:0,fontWeight:500 }}>{r.operador}</p>
-                        </div>
-                        {campos.filter(c=>r.valores?.[c.id]).map(c=>{
-                          const est=c.nk?checkAlerta(r.tipo,c.nk,r.valores[c.id]):null;
-                          const norm=NORMATIVA[r.tipo]?.[c.nk];
-                          return (
-                            <div key={c.id} style={{ background:est==="critico"?"#fde8e8":est==="alerta"?"#fef3cd":"#fafafa",border:`1px solid ${est==="critico"?"rgba(192,57,43,0.2)":est==="alerta"?"rgba(230,168,23,0.2)":"rgba(0,0,0,0.06)"}`,borderRadius:10,padding:"8px 12px" }}>
-                              <p style={{ color:est==="critico"?"#c0392b":est==="alerta"?"#b7860a":"#888",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.1em",margin:"0 0 2px" }}>{c.label.toUpperCase()}</p>
-                              <p style={{ color:est==="critico"?"#c0392b":"#1a1a1a",fontFamily:"system-ui",fontSize:14,margin:0,fontWeight:est?"700":"400" }}>{r.valores[c.id]}</p>
-                              {est==="critico"&&norm&&<p style={{ color:"#c0392b",fontFamily:"system-ui",fontSize:9,margin:"3px 0 0",fontWeight:700 }}>🔴 Fuera de norma · {norm.norma}</p>}
-                              {est==="alerta"&&norm&&<p style={{ color:"#b7860a",fontFamily:"system-ui",fontSize:9,margin:"3px 0 0",fontWeight:700 }}>🟡 Cerca del límite · {norm.norma}</p>}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
+            : filtrados.map(r=>(
+                <TarjetaRegistro
+                  key={r.id}
+                  r={r}
+                  abierto={expandido===r.id}
+                  onToggle={()=>setExpandido(expandido===r.id?null:r.id)}
+                  onEditar={()=>setEditandoReg(r.id)}
+                />
+              ))
         )}
         <div style={{ height:16 }}/>
       </div>
@@ -402,7 +566,7 @@ function DetalleProyecto({ proyecto, proyectoActivo, registros, onCambiarActivo,
 // ═══════════════════════════════════════════════════════════════
 // PROYECTOS — lista para entrar al detalle
 // ═══════════════════════════════════════════════════════════════
-function Proyectos({ proyectos, proyectoActivo, registros, onCambiarActivo, onActualizar, onNuevoRegistro, onVolver }) {
+function Proyectos({ proyectos, proyectoActivo, registros, onCambiarActivo, onActualizar, onEditarRegistro, onEliminarRegistro, onNuevoRegistro, onVolver }) {
   const [detalle,setDetalle]=useState(null);
 
   if(detalle) return (
@@ -412,6 +576,8 @@ function Proyectos({ proyectos, proyectoActivo, registros, onCambiarActivo, onAc
       registros={registros}
       onCambiarActivo={p=>{ onCambiarActivo(p); setDetalle({...detalle,...p}); }}
       onActualizar={(id,cambios)=>{ onActualizar(id,cambios); setDetalle(d=>({...d,...cambios})); }}
+      onEditarRegistro={onEditarRegistro}
+      onEliminarRegistro={onEliminarRegistro}
       onNuevoRegistro={onNuevoRegistro}
       onVolver={()=>setDetalle(null)}
     />
@@ -458,7 +624,7 @@ function Proyectos({ proyectos, proyectoActivo, registros, onCambiarActivo, onAc
 }
 
 // ═══════════════════════════════════════════════════════════════
-// FORMULARIO
+// FORMULARIO NUEVO REGISTRO
 // ═══════════════════════════════════════════════════════════════
 function Formulario({ tipo, proyecto, user, onGuardar, onBack }) {
   const cfg=TIPO_CFG[tipo]; const campos=CAMPOS[tipo]||[];
@@ -497,34 +663,7 @@ function Formulario({ tipo, proyecto, user, onGuardar, onBack }) {
         </div>
       </div>
       <div style={{ flex:1,overflowY:"auto",padding:"14px 16px",display:"flex",flexDirection:"column",gap:10 }}>
-        {alertas>0&&<div style={{ background:"#fde8e8",border:"1.5px solid rgba(192,57,43,0.2)",borderRadius:14,padding:"10px 14px" }}><p style={{ color:"#c0392b",fontFamily:"system-ui",fontSize:11,fontWeight:700,margin:0 }}>🚨 {alertas} parámetro{alertas>1?"s":""} fuera de norma</p></div>}
-        {campos.map(c=>{
-          const est=c.nk?checkAlerta(tipo,c.nk,vals[c.id]):null;
-          const norm=NORMATIVA[tipo]?.[c.nk];
-          return (
-            <div key={c.id}>
-              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5 }}>
-                <p style={{ color:cfg.color,fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.12em",margin:0 }}>{c.label.toUpperCase()} {c.req&&<span style={{ color:"#e07070" }}>*</span>}</p>
-                {norm&&<span style={{ background:cfg.bg,color:cfg.color,fontFamily:"system-ui",fontSize:9,padding:"1px 7px",borderRadius:8,opacity:0.8 }}>Ref: {norm.min?`${norm.min}–${norm.max||"∞"}`:`≤ ${norm.max}`}</span>}
-              </div>
-              {c.tipo==="yesno"?(
-                <div style={{ display:"flex",gap:8 }}>
-                  {["Sí","No","Parcialmente"].map(o=>(
-                    <button key={o} onClick={()=>setVals(v=>({...v,[c.id]:o}))} style={{ flex:1,padding:"10px",borderRadius:12,border:`1.5px solid ${vals[c.id]===o?cfg.color:"rgba(0,0,0,0.1)"}`,background:vals[c.id]===o?cfg.color:"white",color:vals[c.id]===o?"white":"#555",fontFamily:"system-ui",fontSize:12,fontWeight:vals[c.id]===o?700:400,cursor:"pointer" }}>{o}</button>
-                  ))}
-                </div>
-              ):c.area?(
-                <textarea value={vals[c.id]||""} onChange={e=>setVals(v=>({...v,[c.id]:e.target.value}))} placeholder={c.ph} rows={3}
-                  style={{ width:"100%",background:"white",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:12,padding:"11px 14px",fontFamily:"system-ui",fontSize:13,outline:"none",resize:"none",boxSizing:"border-box" }}/>
-              ):(
-                <input type={c.num?"number":"text"} value={vals[c.id]||""} onChange={e=>setVals(v=>({...v,[c.id]:e.target.value}))} placeholder={c.ph}
-                  style={{ width:"100%",background:est==="critico"?"#fde8e8":est==="alerta"?"#fef3cd":"white",border:`1.5px solid ${est==="critico"?"#c0392b":est==="alerta"?"#e6a817":vals[c.id]?cfg.color+"55":"rgba(0,0,0,0.1)"}`,borderRadius:12,padding:"11px 14px",fontFamily:"system-ui",fontSize:14,outline:"none",boxSizing:"border-box",color:"#1a1a1a" }}/>
-              )}
-              {est==="critico"&&norm&&<p style={{ color:"#c0392b",fontFamily:"system-ui",fontSize:10,margin:"3px 0 0",fontWeight:700 }}>🔴 Fuera de norma · {norm.norma}</p>}
-              {est==="alerta"&&norm&&<p style={{ color:"#e6a817",fontFamily:"system-ui",fontSize:10,margin:"3px 0 0",fontWeight:700 }}>🟡 Cerca del límite · {norm.norma}</p>}
-            </div>
-          );
-        })}
+        <CamposFormulario tipo={tipo} vals={vals} setVals={setVals}/>
         <button onClick={guardar} disabled={!reqsOk} style={{ width:"100%",background:reqsOk?`linear-gradient(135deg,${cfg.color},${cfg.color}cc)`:"rgba(45,106,79,0.1)",border:"none",borderRadius:16,padding:"14px",color:reqsOk?"white":"#95d5b2",fontFamily:"system-ui",fontWeight:700,fontSize:14,cursor:reqsOk?"pointer":"default" }}>
           {reqsOk?`Guardar registro ${alertas>0?"⚠️":"✓"}`:"Completá los campos obligatorios (*)"}
         </button>
@@ -537,12 +676,26 @@ function Formulario({ tipo, proyecto, user, onGuardar, onBack }) {
 // ═══════════════════════════════════════════════════════════════
 // HISTORIAL
 // ═══════════════════════════════════════════════════════════════
-function Historial({ registros, proyecto }) {
+function Historial({ registros, proyecto, onEditarRegistro, onEliminarRegistro }) {
   const [filtro,setFiltro]=useState("todos");
   const [busqueda,setBusqueda]=useState("");
   const [expandido,setExpandido]=useState(null);
+  const [editandoReg,setEditandoReg]=useState(null);
+
   const todos=registros.filter(r=>r.proyectoId===proyecto.id);
   const filtrados=todos.filter(r=>(filtro==="todos"||r.tipo===filtro)&&(!busqueda||JSON.stringify(r).toLowerCase().includes(busqueda.toLowerCase())));
+
+  if(editandoReg) {
+    const reg=registros.find(r=>r.id===editandoReg);
+    if(!reg) { setEditandoReg(null); return null; }
+    return <EditorRegistro
+      registro={reg}
+      onGuardar={r=>{ onEditarRegistro(r); setEditandoReg(null); }}
+      onEliminar={()=>{ onEliminarRegistro(editandoReg); setEditandoReg(null); }}
+      onVolver={()=>setEditandoReg(null)}
+    />;
+  }
+
   return (
     <div style={{ flex:1,overflowY:"auto",background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
       <div style={{ padding:"14px 18px 12px",borderBottom:"1px solid rgba(45,106,79,0.1)",position:"sticky",top:0,background:"rgba(240,250,244,0.96)",backdropFilter:"blur(12px)",zIndex:10 }}>
@@ -560,67 +713,21 @@ function Historial({ registros, proyecto }) {
         </div>
       </div>
       <div style={{ padding:"12px 16px",display:"flex",flexDirection:"column",gap:8 }}>
-        {filtrados.length===0&&<div style={{ textAlign:"center",padding:"40px 0" }}><div style={{ fontSize:40,marginBottom:10 }}>📋</div><p style={{ color:"#b7e4c7",fontFamily:"system-ui",fontSize:13 }}>Sin registros{filtro!=="todos"?" de este tipo":""}</p></div>}
-        {filtrados.map(r=>{
-          const cfg=TIPO_CFG[r.tipo];
-          const abierto=expandido===r.id;
-          const campos=CAMPOS[r.tipo]||[];
-          return (
-            <div key={r.id} style={{ background:"white",border:`1.5px solid ${abierto?cfg.color+"55":cfg.bg}`,borderRadius:16,overflow:"hidden",boxShadow:abierto?"0 4px 16px rgba(27,67,50,0.10)":"0 2px 8px rgba(27,67,50,0.05)",transition:"box-shadow 0.2s" }}>
-              {/* CABECERA — siempre visible, toque para expandir */}
-              <button onClick={()=>setExpandido(abierto?null:r.id)} style={{ width:"100%",background:"none",border:"none",cursor:"pointer",padding:"12px 14px",textAlign:"left" }}>
-                <div style={{ display:"flex",alignItems:"flex-start",gap:10 }}>
-                  <div style={{ width:36,height:36,borderRadius:10,background:cfg.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0 }}>{cfg.icon}</div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3 }}>
-                      <span style={{ background:cfg.bg,color:cfg.color,fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>{cfg.label}</span>
-                      {r.alerta&&<span style={{ background:"#fde8e8",color:"#c0392b",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8 }}>🚨 Alerta</span>}
-                      <span style={{ color:"#ccc",fontFamily:"system-ui",fontSize:10 }}>· {r.timestamp}</span>
-                    </div>
-                    <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:"0 0 2px",fontWeight:500 }}>{r.valores?.comunidad||r.valores?.punto||"Sin detalle"}</p>
-                    <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
-                      <div style={{ display:"flex",gap:8 }}>
-                        <span style={{ color:"#aaa",fontFamily:"system-ui",fontSize:10 }}>👤 {r.operador}</span>
-                        <span style={{ color:"#52b788",fontFamily:"system-ui",fontSize:10 }}>✓ Guardado</span>
-                      </div>
-                      <span style={{ color:cfg.color,fontSize:14,transition:"transform 0.2s",display:"inline-block",transform:abierto?"rotate(90deg)":"rotate(0deg)" }}>›</span>
-                    </div>
-                  </div>
-                </div>
-              </button>
-              {/* DETALLE EXPANDIDO */}
-              {abierto&&(
-                <div style={{ borderTop:`1px solid ${cfg.bg}`,padding:"12px 14px",display:"flex",flexDirection:"column",gap:8 }}>
-                  {/* Encabezado del detalle */}
-                  <div style={{ background:cfg.bg,borderRadius:10,padding:"8px 12px",marginBottom:2 }}>
-                    <p style={{ color:cfg.color,fontFamily:"system-ui",fontSize:10,fontWeight:700,margin:"0 0 1px",letterSpacing:"0.1em" }}>📅 FECHA Y HORA</p>
-                    <p style={{ color:cfg.color,fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:15,margin:0 }}>{r.timestamp}</p>
-                  </div>
-                  <div style={{ background:"#f8f8f8",borderRadius:10,padding:"8px 12px",marginBottom:4 }}>
-                    <p style={{ color:"#666",fontFamily:"system-ui",fontSize:10,fontWeight:700,margin:"0 0 1px",letterSpacing:"0.1em" }}>👤 OPERADOR</p>
-                    <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:0,fontWeight:500 }}>{r.operador}</p>
-                  </div>
-                  {/* Campos del registro */}
-                  {campos.filter(c=>r.valores?.[c.id]).map(c=>{
-                    const est=c.nk?checkAlerta(r.tipo,c.nk,r.valores[c.id]):null;
-                    const norm=NORMATIVA[r.tipo]?.[c.nk];
-                    return (
-                      <div key={c.id} style={{ background:est==="critico"?"#fde8e8":est==="alerta"?"#fef3cd":"#fafafa",border:`1px solid ${est==="critico"?"rgba(192,57,43,0.2)":est==="alerta"?"rgba(230,168,23,0.2)":"rgba(0,0,0,0.06)"}`,borderRadius:10,padding:"8px 12px" }}>
-                        <p style={{ color:est==="critico"?"#c0392b":est==="alerta"?"#b7860a":"#888",fontFamily:"system-ui",fontSize:9,fontWeight:700,letterSpacing:"0.1em",margin:"0 0 2px" }}>{c.label.toUpperCase()}</p>
-                        <p style={{ color:est==="critico"?"#c0392b":"#1a1a1a",fontFamily:"system-ui",fontSize:14,margin:0,fontWeight:est?"700":"400" }}>{r.valores[c.id]}</p>
-                        {est==="critico"&&norm&&<p style={{ color:"#c0392b",fontFamily:"system-ui",fontSize:9,margin:"3px 0 0",fontWeight:700 }}>🔴 Fuera de norma · {norm.norma}</p>}
-                        {est==="alerta"&&norm&&<p style={{ color:"#b7860a",fontFamily:"system-ui",fontSize:9,margin:"3px 0 0",fontWeight:700 }}>🟡 Cerca del límite · {norm.norma}</p>}
-                      </div>
-                    );
-                  })}
-                  {campos.filter(c=>r.valores?.[c.id]).length===0&&(
-                    <p style={{ color:"#bbb",fontFamily:"system-ui",fontSize:12,textAlign:"center",margin:"4px 0" }}>Sin datos cargados</p>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {filtrados.length===0&&(
+          <div style={{ textAlign:"center",padding:"40px 0" }}>
+            <div style={{ fontSize:40,marginBottom:10 }}>📋</div>
+            <p style={{ color:"#b7e4c7",fontFamily:"system-ui",fontSize:13 }}>Sin registros{filtro!=="todos"?" de este tipo":""}</p>
+          </div>
+        )}
+        {filtrados.map(r=>(
+          <TarjetaRegistro
+            key={r.id}
+            r={r}
+            abierto={expandido===r.id}
+            onToggle={()=>setExpandido(expandido===r.id?null:r.id)}
+            onEditar={()=>setEditandoReg(r.id)}
+          />
+        ))}
         <div style={{ height:16 }}/>
       </div>
     </div>
@@ -676,7 +783,7 @@ function QRCliente({ proyectos }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// FORMULARIOS / VERSIONADO
+// FORMULARIOS / VERSIONADO DE PLANTILLAS
 // ═══════════════════════════════════════════════════════════════
 const PLANTILLAS_DEF=[
   { id:1,nombre:"Relevamiento inicial",comunidad:"Los Molles", version:1,bloqueado:true, usos:24,modificado:"10/03/2026" },
@@ -713,7 +820,7 @@ function Formularios() {
                       <span style={{ background:f.bloqueado?"#d0e8f5":"#d8f3dc",color:f.bloqueado?"#1e6091":"#2d6a4f",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:8 }}>{f.bloqueado?"🔒 Bloqueado":"✅ Activo"}</span>
                       <span style={{ background:"#f0faf4",color:"#52b788",fontFamily:"system-ui",fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:8 }}>v{f.version}</span>
                     </div>
-                    <p style={{ color:"#888",fontFamily:"system-ui",fontSize:11,margin:0 }}>📍 {f.comunidad} · {f.usos} usos</p>
+                    <p style={{ color:"#888",fontFamily:"system-ui",fontSize:11,margin:0 }}>📍 {f.comunidad} · {f.usos} usos · {f.modificado}</p>
                   </div>
                   <span style={{ color:"#b7e4c7",fontSize:18 }}>›</span>
                 </div>
@@ -731,6 +838,12 @@ function Formularios() {
               <div style={{ flex:1,background:form.bloqueado?"#d0e8f5":"#d8f3dc",borderRadius:12,padding:"10px",textAlign:"center" }}>
                 <p style={{ color:form.bloqueado?"#1e6091":"#2d6a4f",fontFamily:"system-ui",fontSize:13,fontWeight:700,margin:0 }}>{form.bloqueado?"🔒 Bloqueado":"✅ Activo"}</p>
               </div>
+            </div>
+            <div style={{ background:"#f8f8f8",borderRadius:12,padding:"12px",marginBottom:12 }}>
+              <p style={{ color:"#888",fontFamily:"system-ui",fontSize:10,fontWeight:700,letterSpacing:"0.1em",margin:"0 0 4px" }}>DETALLES</p>
+              <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:"0 0 2px" }}>📍 Comunidad: <strong>{form.comunidad}</strong></p>
+              <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:"0 0 2px" }}>📋 Usos: <strong>{form.usos}</strong></p>
+              <p style={{ color:"#1a1a1a",fontFamily:"system-ui",fontSize:13,margin:0 }}>📅 Modificado: <strong>{form.modificado}</strong></p>
             </div>
             {form.bloqueado
               ?<button onClick={()=>upd(plantillas.map(p=>p.id===form.id?{...p,bloqueado:false}:p))} style={{ width:"100%",background:"#f0faf4",border:"1.5px solid rgba(45,106,79,0.2)",borderRadius:12,padding:"11px",color:"#2d6a4f",fontFamily:"system-ui",fontWeight:600,fontSize:13,cursor:"pointer" }}>🔓 Desbloquear</button>
@@ -767,6 +880,8 @@ export default function App() {
 
   const [registros,setRegistros] = useState(()=>load("registros",[]));
   const addRegistro=r=>{ const n=[{...r,id:Date.now()},...registros]; setRegistros(n); save("registros",n); if(!online) setPendientes(p=>p+1); };
+  const editRegistro=r=>{ const n=registros.map(x=>x.id===r.id?r:x); setRegistros(n); save("registros",n); };
+  const deleteRegistro=id=>{ const n=registros.filter(x=>x.id!==id); setRegistros(n); save("registros",n); };
   const sincronizar=()=>{ const s=registros.map(r=>({...r,sincronizado:true})); setRegistros(s); save("registros",s); setPendientes(0); };
 
   const hoyCount=proyecto?registros.filter(r=>r.proyectoId===proyecto.id).length:0;
@@ -774,9 +889,21 @@ export default function App() {
   const renderContent=()=>{
     if(screen==="login") return <Login onLogin={u=>{ setUser(u); setScreen("app"); setTab("inicio"); }}/>;
     if(screen!=="app") return null;
-    if(tab==="proyectos") return <Proyectos proyectos={proyectos} proyectoActivo={proyecto} registros={registros} onCambiarActivo={cambiarActivo} onActualizar={actualizarProyecto} onNuevoRegistro={p=>{ cambiarActivo(p); setTipoForm(null); setTab("inicio"); }} onVolver={()=>setTab("inicio")}/>;
+    if(tab==="proyectos") return (
+      <Proyectos
+        proyectos={proyectos}
+        proyectoActivo={proyecto}
+        registros={registros}
+        onCambiarActivo={cambiarActivo}
+        onActualizar={actualizarProyecto}
+        onEditarRegistro={editRegistro}
+        onEliminarRegistro={deleteRegistro}
+        onNuevoRegistro={p=>{ cambiarActivo(p); setTipoForm(null); setTab("inicio"); }}
+        onVolver={()=>setTab("inicio")}
+      />
+    );
     if(tab==="form"&&tipoForm) return <Formulario tipo={tipoForm} proyecto={proyecto} user={user} onGuardar={r=>addRegistro(r)} onBack={()=>{ setTipoForm(null); setTab("inicio"); }}/>;
-    if(tab==="historial") return <Historial registros={registros} proyecto={proyecto}/>;
+    if(tab==="historial") return <Historial registros={registros} proyecto={proyecto} onEditarRegistro={editRegistro} onEliminarRegistro={deleteRegistro}/>;
     if(tab==="qr") return <QRCliente proyectos={proyectos}/>;
     if(tab==="formularios") return <Formularios/>;
     return <Inicio user={user} proyecto={proyecto} registros={registros} online={online} pendientes={pendientes} onNav={tipo=>{ setTipoForm(tipo); setTab("form"); }} onVerProyectos={()=>setTab("proyectos")} onSincronizar={sincronizar}/>;
