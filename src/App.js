@@ -426,7 +426,7 @@ function Login({ onLogin }) {
 // ═══════════════════════════════════════════════════════════════
 // INICIO
 // ═══════════════════════════════════════════════════════════════
-function Inicio({ user, proyecto, registros, online, pendientes, onNav, onVerProyectos, onSincronizar, onExportar }) {
+function Inicio({ user, proyecto, registros, online, pendientes, formulariosCust, onNav, onNavCustom, onVerProyectos, onSincronizar, onExportar }) {
   const hoy = registros.filter(r => r.proyectoId === proyecto.id);
   const alertasHoy = hoy.filter(r => r.alerta).length;
   const totalTodos = registros.length;
@@ -501,6 +501,28 @@ function Inicio({ user, proyecto, registros, online, pendientes, onNav, onVerPro
               </button>
             );
           })}
+
+          {/* FORMULARIOS CUSTOM */}
+          {(formulariosCust||[]).length > 0 && (
+            <>
+              <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, fontWeight:400, letterSpacing:"0.2em", margin:"6px 0 0", paddingLeft:2 }}>MIS FORMULARIOS</p>
+              {(formulariosCust||[]).map(f => {
+                const cfg = BASE_TIPO_CFG[f.tipo] || BASE_TIPO_CFG.custom;
+                const count = hoy.filter(r => r.formularioId === f.id).length;
+                return (
+                  <button key={f.id} onClick={() => onNavCustom(f)} className="btn-press" style={{ background:`linear-gradient(135deg,${cfg.color} 0%,${cfg.color}dd 100%)`, border:"none", borderRadius:16, padding:"13px 14px", display:"flex", alignItems:"center", gap:12, cursor:"pointer", boxShadow:`0 4px 16px ${cfg.color}2a`, textAlign:"left" }}>
+                    <div style={{ width:42, height:42, borderRadius:12, background:"rgba(255,255,255,0.1)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>{cfg.icon}</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <p style={{ color:"white", fontFamily:T.serif, fontSize:17, margin:0, fontWeight:400, letterSpacing:"0.3px", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{f.nombre}</p>
+                      <p style={{ color:"rgba(255,255,255,0.45)", fontFamily:T.mono, fontSize:9, margin:0 }}>{(f.preguntas||[]).length} preguntas</p>
+                    </div>
+                    {count > 0 && <Badge variant="dark" small>{count} hoy</Badge>}
+                    <span style={{ color:"rgba(255,255,255,0.3)", fontSize:18, fontWeight:300 }}>›</span>
+                  </button>
+                );
+              })}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -988,74 +1010,416 @@ function QRCliente({ proyectos }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PLANTILLAS
+// CONSTRUCTOR DE FORMULARIOS
+// Permite crear formularios custom con preguntas propias,
+// editarlos, y usarlos para relevar encuestas y censos.
 // ═══════════════════════════════════════════════════════════════
-const PLANTILLAS_DEF = [
-  { id:1, nombre:"Relevamiento inicial", comunidad:"Los Molles",  version:1, bloqueado:true,  usos:24, modificado:"10/03/2026" },
-  { id:2, nombre:"Impacto percibido",    comunidad:"Villa Unión", version:1, bloqueado:false, usos:8,  modificado:"12/03/2026" },
-  { id:3, nombre:"Censo básico",         comunidad:"El Retamo",   version:2, bloqueado:false, usos:0,  modificado:"17/03/2026" },
-];
-function Formularios() {
-  const [plantillas, setPlantillas] = useState(() => load("plantillas", PLANTILLAS_DEF));
-  const [sel, setSel] = useState(null);
-  const form = sel ? plantillas.find(f => f.id===sel) : null;
-  const upd = ps => { setPlantillas(ps); save("plantillas", ps); };
+
+const TIPO_PREGUNTA_CFG = {
+  texto:    { label:"Texto libre",              icon:"📝", ph:"Respuesta abierta" },
+  numero:   { label:"Número",                   icon:"🔢", ph:"Valor numérico" },
+  yesno:    { label:"Sí / No / Parcialmente",   icon:"✅", ph:"" },
+  opcion:   { label:"Opción múltiple",          icon:"☰",  ph:"" },
+};
+
+const BASE_TIPO_CFG = {
+  encuesta: { icon:"📋", label:"Encuesta Social",   color:"#1b4332", bg:"#d8f3dc" },
+  censo:    { icon:"🏘",  label:"Censo Comunitario", color:"#2d4a8a", bg:"#dce8ff" },
+  custom:   { icon:"✏️", label:"Personalizado",     color:"#5c3d7a", bg:"#ede8f5" },
+};
+
+// ── Editor de una pregunta individual ───────────────────────────
+function EditorPregunta({ pregunta, idx, total, onChange, onEliminar, onMover }) {
+  const [abierto, setAbierto] = useState(false);
+  const cfg = TIPO_PREGUNTA_CFG[pregunta.tipo];
+
+  return (
+    <div style={{ background:"white", border:`1.5px solid rgba(45,106,79,0.1)`, borderRadius:14, overflow:"hidden", boxShadow:T.shadow }}>
+      {/* Cabecera colapsable */}
+      <div style={{ display:"flex", alignItems:"center", gap:10, padding:"11px 14px" }}>
+        <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+          <button onClick={() => onMover(idx, -1)} disabled={idx===0} style={{ background:"none", border:"none", cursor:idx===0?"default":"pointer", fontSize:11, color:idx===0?"#ddd":T.moss, lineHeight:1, padding:0 }}>▲</button>
+          <button onClick={() => onMover(idx,  1)} disabled={idx===total-1} style={{ background:"none", border:"none", cursor:idx===total-1?"default":"pointer", fontSize:11, color:idx===total-1?"#ddd":T.moss, lineHeight:1, padding:0 }}>▼</button>
+        </div>
+        <div style={{ width:32, height:32, borderRadius:8, background:T.surface, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0 }}>{cfg.icon}</div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <p style={{ color:"#1a1a1a", fontFamily:T.sans, fontSize:13, fontWeight:500, margin:0, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+            {pregunta.label || <span style={{ color:"#ccc" }}>Sin título</span>}
+          </p>
+          <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, margin:0 }}>{cfg.label} {pregunta.req && "· Obligatoria"}</p>
+        </div>
+        <button onClick={() => onEliminar(idx)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, color:"#ddd", padding:"2px 4px" }}>✕</button>
+        <button onClick={() => setAbierto(v=>!v)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, color:T.moss, padding:"2px 4px", transition:"transform 0.2s", transform:abierto?"rotate(90deg)":"none" }}>›</button>
+      </div>
+
+      {abierto && (
+        <div style={{ borderTop:`1px solid ${T.surface}`, padding:"12px 14px", display:"flex", flexDirection:"column", gap:10, background:T.surface, animation:"fadeUp 0.15s ease" }}>
+          {/* Tipo */}
+          <div>
+            <p style={{ color:T.moss, fontFamily:T.sans, fontSize:9, fontWeight:600, letterSpacing:"0.1em", margin:"0 0 6px" }}>TIPO DE RESPUESTA</p>
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+              {Object.entries(TIPO_PREGUNTA_CFG).map(([k, v]) => (
+                <button key={k} onClick={() => onChange(idx, { tipo: k })} className="btn-press"
+                  style={{ padding:"6px 10px", borderRadius:10, border:`1.5px solid ${pregunta.tipo===k?T.moss:"rgba(45,106,79,0.12)"}`, background:pregunta.tipo===k?T.frost:"white", color:pregunta.tipo===k?T.moss:"#888", fontFamily:T.sans, fontSize:11, fontWeight:pregunta.tipo===k?600:400, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+                  {v.icon} {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Etiqueta */}
+          <div>
+            <p style={{ color:T.moss, fontFamily:T.sans, fontSize:9, fontWeight:600, letterSpacing:"0.1em", margin:"0 0 5px" }}>PREGUNTA / ETIQUETA</p>
+            <input value={pregunta.label} onChange={e => onChange(idx, { label: e.target.value })} placeholder="Ej: ¿Cuántas personas habitan el hogar?"
+              style={{ width:"100%", background:"white", border:`1.5px solid rgba(45,106,79,0.15)`, borderRadius:10, padding:"9px 12px", fontFamily:T.sans, fontSize:13, boxSizing:"border-box", color:"#1a1a1a" }}/>
+          </div>
+
+          {/* Placeholder (solo para texto/numero) */}
+          {(pregunta.tipo === "texto" || pregunta.tipo === "numero") && (
+            <div>
+              <p style={{ color:T.moss, fontFamily:T.sans, fontSize:9, fontWeight:600, letterSpacing:"0.1em", margin:"0 0 5px" }}>TEXTO DE AYUDA (opcional)</p>
+              <input value={pregunta.ph||""} onChange={e => onChange(idx, { ph: e.target.value })} placeholder="Ej: Ingresá un valor entre 1 y 100"
+                style={{ width:"100%", background:"white", border:`1.5px solid rgba(45,106,79,0.12)`, borderRadius:10, padding:"9px 12px", fontFamily:T.sans, fontSize:13, boxSizing:"border-box", color:"#1a1a1a" }}/>
+            </div>
+          )}
+
+          {/* Opciones múltiples */}
+          {pregunta.tipo === "opcion" && (
+            <div>
+              <p style={{ color:T.moss, fontFamily:T.sans, fontSize:9, fontWeight:600, letterSpacing:"0.1em", margin:"0 0 6px" }}>OPCIONES</p>
+              {(pregunta.opciones||[""]).map((op, oi) => (
+                <div key={oi} style={{ display:"flex", gap:6, marginBottom:6 }}>
+                  <input value={op} onChange={e => { const ops=[...(pregunta.opciones||[""])]; ops[oi]=e.target.value; onChange(idx,{opciones:ops}); }} placeholder={`Opción ${oi+1}`}
+                    style={{ flex:1, background:"white", border:`1.5px solid rgba(45,106,79,0.12)`, borderRadius:10, padding:"8px 12px", fontFamily:T.sans, fontSize:13, boxSizing:"border-box", color:"#1a1a1a" }}/>
+                  <button onClick={() => { const ops=(pregunta.opciones||[""]).filter((_,i)=>i!==oi); onChange(idx,{opciones:ops.length?ops:[""]}); }} style={{ background:"none", border:"none", cursor:"pointer", color:"#ddd", fontSize:14 }}>✕</button>
+                </div>
+              ))}
+              <button onClick={() => onChange(idx,{opciones:[...(pregunta.opciones||[""]),""]})} className="btn-press" style={{ border:`1.5px dashed rgba(45,106,79,0.2)`, borderRadius:10, padding:"7px 14px", color:T.moss, fontFamily:T.sans, fontSize:12, background:"none", cursor:"pointer" }}>+ Agregar opción</button>
+            </div>
+          )}
+
+          {/* Obligatoria */}
+          <button onClick={() => onChange(idx, { req: !pregunta.req })} className="btn-press"
+            style={{ display:"flex", alignItems:"center", gap:8, background:"none", border:"none", cursor:"pointer", padding:0 }}>
+            <div style={{ width:18, height:18, borderRadius:5, border:`2px solid ${pregunta.req?T.moss:"rgba(45,106,79,0.2)"}`, background:pregunta.req?T.moss:"white", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.15s" }}>
+              {pregunta.req && <span style={{ color:"white", fontSize:10, lineHeight:1 }}>✓</span>}
+            </div>
+            <span style={{ color:"#555", fontFamily:T.sans, fontSize:12 }}>Obligatoria</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Constructor / Editor de formulario completo ──────────────────
+function BuilderFormulario({ formulario, onGuardar, onVolver }) {
+  const esNuevo = !formulario;
+  const [nombre, setNombre] = useState(formulario?.nombre || "");
+  const [tipo,   setTipo]   = useState(formulario?.tipo   || "encuesta");
+  const [preguntas, setPreguntas] = useState(
+    formulario?.preguntas || [{ id: Date.now(), tipo:"texto", label:"", ph:"", req:false }]
+  );
+  const [guardado, setGuardado] = useState(false);
+
+  const addPregunta = () => setPreguntas(ps => [...ps, { id:Date.now(), tipo:"texto", label:"", ph:"", req:false }]);
+  const delPregunta = idx => setPreguntas(ps => ps.filter((_,i)=>i!==idx));
+  const updPregunta = (idx, cambios) => setPreguntas(ps => ps.map((p,i) => i===idx ? {...p,...cambios} : p));
+  const moverPregunta = (idx, dir) => {
+    const ps = [...preguntas];
+    const ni = idx + dir;
+    if (ni < 0 || ni >= ps.length) return;
+    [ps[idx], ps[ni]] = [ps[ni], ps[idx]];
+    setPreguntas(ps);
+  };
+
+  const guardar = () => {
+    if (!nombre.trim() || preguntas.length === 0) return;
+    onGuardar({ ...(formulario||{}), id: formulario?.id || Date.now(), nombre: nombre.trim(), tipo, preguntas, modificado: ahora(), version: (formulario?.version||0)+1, usos: formulario?.usos||0 });
+    setGuardado(true);
+  };
+
+  if (guardado) return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:T.surface, padding:28, gap:16 }}>
+      <div style={{ width:76, height:76, borderRadius:"50%", background:T.frost, border:`3px solid ${T.sage}33`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:34, animation:"scaleIn 0.3s ease" }}>✅</div>
+      <h3 style={{ color:T.forest, fontFamily:T.serif, fontSize:26, fontWeight:400, textAlign:"center", margin:0 }}>¡Formulario guardado!</h3>
+      <p style={{ color:T.mist, fontFamily:T.sans, fontSize:13, textAlign:"center", margin:0 }}>{preguntas.length} pregunta{preguntas.length!==1?"s":""} · {nombre}</p>
+      <button onClick={onVolver} className="btn-press" style={{ width:"100%", background:T.moss, border:"none", borderRadius:14, padding:"14px", color:"white", fontFamily:T.sans, fontWeight:600, fontSize:14, cursor:"pointer" }}>← Volver a formularios</button>
+    </div>
+  );
+
+  const cfgTipo = BASE_TIPO_CFG[tipo];
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:T.surface }}>
+      {/* Header */}
+      <div style={{ padding:"14px 18px 12px", borderBottom:`1px solid rgba(45,106,79,0.07)`, background:"rgba(255,255,255,0.97)", position:"sticky", top:0, zIndex:10, backdropFilter:"blur(12px)" }}>
+        <button onClick={onVolver} style={{ color:T.sage, fontFamily:T.sans, fontSize:12, background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:10, fontWeight:500 }}>‹ Formularios</button>
+        <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, letterSpacing:"0.18em", margin:"0 0 2px" }}>{esNuevo?"NUEVO FORMULARIO":"EDITAR FORMULARIO"}</p>
+        <h2 style={{ color:T.forest, fontFamily:T.serif, fontSize:21, fontWeight:400, margin:0 }}>{nombre || <span style={{ color:"#ccc" }}>Sin título</span>}</h2>
+      </div>
+
+      <div style={{ flex:1, overflowY:"auto", padding:"14px 16px", display:"flex", flexDirection:"column", gap:12 }}>
+        {/* Nombre del formulario */}
+        <div style={{ background:"white", borderRadius:16, padding:"14px", border:`1.5px solid rgba(45,106,79,0.1)`, boxShadow:T.shadow }}>
+          <p style={{ color:T.moss, fontFamily:T.sans, fontSize:9, fontWeight:600, letterSpacing:"0.12em", margin:"0 0 6px" }}>NOMBRE DEL FORMULARIO</p>
+          <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Ej: Encuesta socioeconómica Q2"
+            style={{ width:"100%", background:T.surface, border:`1.5px solid ${nombre?"rgba(45,106,79,0.3)":"rgba(45,106,79,0.12)"}`, borderRadius:12, padding:"11px 14px", fontFamily:T.sans, fontSize:14, boxSizing:"border-box", color:"#1a1a1a", fontWeight:500 }}/>
+
+          {/* Tipo de formulario */}
+          <p style={{ color:T.moss, fontFamily:T.sans, fontSize:9, fontWeight:600, letterSpacing:"0.12em", margin:"12px 0 6px" }}>TIPO</p>
+          <div style={{ display:"flex", gap:8 }}>
+            {Object.entries(BASE_TIPO_CFG).map(([k,v]) => (
+              <button key={k} onClick={() => setTipo(k)} className="btn-press"
+                style={{ flex:1, padding:"9px 6px", borderRadius:12, border:`1.5px solid ${tipo===k?v.color:"rgba(45,106,79,0.12)"}`, background:tipo===k?v.bg:"white", cursor:"pointer" }}>
+                <div style={{ fontSize:16, marginBottom:2 }}>{v.icon}</div>
+                <p style={{ color:tipo===k?v.color:"#aaa", fontFamily:T.sans, fontSize:9, fontWeight:tipo===k?600:400, margin:0, lineHeight:1.3 }}>{v.label}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Lista de preguntas */}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, letterSpacing:"0.18em", margin:0 }}>PREGUNTAS · {preguntas.length}</p>
+        </div>
+
+        {preguntas.map((p, idx) => (
+          <EditorPregunta key={p.id} pregunta={p} idx={idx} total={preguntas.length} onChange={updPregunta} onEliminar={delPregunta} onMover={moverPregunta}/>
+        ))}
+
+        <button onClick={addPregunta} className="btn-press" style={{ border:`2px dashed rgba(45,106,79,0.2)`, borderRadius:14, padding:"13px", color:T.moss, fontFamily:T.sans, fontSize:13, fontWeight:500, background:"none", cursor:"pointer", textAlign:"center" }}>+ Agregar pregunta</button>
+
+        {/* Guardar */}
+        <button onClick={guardar} disabled={!nombre.trim() || preguntas.length===0} className={nombre.trim()&&preguntas.length?"btn-press":""} style={{ width:"100%", background:nombre.trim()&&preguntas.length?`linear-gradient(135deg,${T.forest},${T.moss})`:"rgba(45,106,79,0.08)", border:"none", borderRadius:16, padding:"14px", color:nombre.trim()&&preguntas.length?"white":T.mist, fontFamily:T.sans, fontWeight:600, fontSize:14, cursor:nombre.trim()&&preguntas.length?"pointer":"default", transition:"all 0.2s" }}>
+          {esNuevo?"Crear formulario ✓":"Guardar cambios ✓"}
+        </button>
+        <div style={{ height:16 }}/>
+      </div>
+    </div>
+  );
+}
+
+// ── Render de campos custom al completar un formulario ───────────
+function CamposCustom({ preguntas, vals, setVals }) {
+  return (
+    <>
+      {preguntas.map((p, idx) => (
+        <div key={p.id||idx} style={{ display:"flex", flexDirection:"column", gap:6 }}>
+          <label style={{ color:T.moss, fontFamily:T.sans, fontSize:10, fontWeight:600, letterSpacing:"0.08em", opacity:0.85 }}>
+            {(p.label||"Sin título").toUpperCase()} {p.req && <span style={{ color:"#e07070" }}>*</span>}
+          </label>
+          {p.tipo === "yesno" ? (
+            <div style={{ display:"flex", gap:6 }}>
+              {["Sí","No","Parcialmente"].map(o => (
+                <button key={o} onClick={() => setVals(v=>({...v,[p.id]:o}))} className="btn-press"
+                  style={{ flex:1, padding:"10px 8px", borderRadius:10, border:`1.5px solid ${vals[p.id]===o?T.moss:"rgba(45,106,79,0.12)"}`, background:vals[p.id]===o?T.moss:"white", color:vals[p.id]===o?"white":"#555", fontFamily:T.sans, fontSize:12, fontWeight:vals[p.id]===o?600:400, cursor:"pointer", transition:"all 0.15s" }}>{o}</button>
+              ))}
+            </div>
+          ) : p.tipo === "opcion" ? (
+            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+              {(p.opciones||[]).map(op => (
+                <button key={op} onClick={() => setVals(v=>({...v,[p.id]:op}))} className="btn-press"
+                  style={{ padding:"10px 14px", borderRadius:10, border:`1.5px solid ${vals[p.id]===op?T.moss:"rgba(45,106,79,0.12)"}`, background:vals[p.id]===op?T.frost:"white", color:vals[p.id]===op?T.moss:"#555", fontFamily:T.sans, fontSize:13, fontWeight:vals[p.id]===op?600:400, cursor:"pointer", textAlign:"left", transition:"all 0.15s" }}>
+                  {vals[p.id]===op ? "● " : "○ "}{op}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <input type={p.tipo==="numero"?"number":"text"} value={vals[p.id]||""} onChange={e=>setVals(v=>({...v,[p.id]:e.target.value}))} placeholder={p.ph||""}
+              style={{ width:"100%", background:"white", border:`1.5px solid ${vals[p.id]?"rgba(45,106,79,0.35)":"rgba(45,106,79,0.12)"}`, borderRadius:12, padding:"11px 14px", fontFamily:T.sans, fontSize:14, boxSizing:"border-box", color:"#1a1a1a", transition:"border-color 0.2s" }}/>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
+// ── Completar un formulario custom (al relevar) ──────────────────
+function RellenarFormularioCustom({ formulario, proyecto, user, onGuardar, onBack }) {
+  const [vals, setVals] = useState({});
+  const [guardado, setGuardado] = useState(false);
+  const cfg = BASE_TIPO_CFG[formulario.tipo] || BASE_TIPO_CFG.custom;
+  const reqsOk = (formulario.preguntas||[]).filter(p=>p.req).every(p => vals[p.id]?.toString().trim());
+
+  const guardar = () => {
+    onGuardar({ tipo:`custom_${formulario.id}`, proyectoId:proyecto.id, valores:vals, operador:`${user.nombre} ${user.apellido}`, timestamp:ahora(), formularioId:formulario.id, formularioNombre:formulario.nombre, alerta:null, sincronizado:true });
+    setGuardado(true);
+  };
+
+  if (guardado) return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:T.surface, padding:28, gap:16 }}>
+      <div style={{ width:76, height:76, borderRadius:"50%", background:cfg.bg, border:`3px solid ${cfg.color}33`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:34, animation:"scaleIn 0.3s ease" }}>{cfg.icon}</div>
+      <h3 style={{ color:cfg.color, fontFamily:T.serif, fontSize:28, fontWeight:400, textAlign:"center", margin:0 }}>¡Guardado!</h3>
+      <div style={{ background:T.frost, border:`1px solid rgba(45,106,79,0.15)`, borderRadius:12, padding:"11px 16px", width:"100%" }}>
+        <p style={{ color:T.moss, fontFamily:T.sans, fontSize:11, margin:0, textAlign:"center", fontWeight:500 }}>✓ Guardado localmente · No se pierde sin conexión</p>
+      </div>
+      <button onClick={onBack} className="btn-press" style={{ width:"100%", background:cfg.color, border:"none", borderRadius:14, padding:"14px", color:"white", fontFamily:T.sans, fontWeight:600, fontSize:14, cursor:"pointer" }}>← Volver al inicio</button>
+      <button onClick={() => { setVals({}); setGuardado(false); }} className="btn-press" style={{ width:"100%", background:cfg.bg, border:"none", borderRadius:14, padding:"12px", color:cfg.color, fontFamily:T.sans, fontWeight:500, fontSize:13, cursor:"pointer" }}>+ Nuevo registro</button>
+    </div>
+  );
+
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:T.surface }}>
+      <div style={{ padding:"14px 18px 12px", borderBottom:`1.5px solid ${cfg.bg}`, background:"rgba(255,255,255,0.95)", position:"sticky", top:0, zIndex:10, backdropFilter:"blur(12px)" }}>
+        <button onClick={onBack} style={{ color:cfg.color, fontFamily:T.sans, fontSize:12, background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:10, fontWeight:500 }}>‹ Inicio</button>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <IconBox icon={cfg.icon} bg={cfg.bg} size={40} radius={12} fontSize={18}/>
+          <div>
+            <p style={{ color:cfg.color, fontFamily:T.mono, fontSize:8, fontWeight:400, letterSpacing:"0.14em", margin:0, opacity:0.65 }}>{proyecto.nombre}</p>
+            <p style={{ color:cfg.color, fontFamily:T.serif, fontSize:17, fontWeight:400, margin:0 }}>{formulario.nombre}</p>
+          </div>
+        </div>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"14px 16px", display:"flex", flexDirection:"column", gap:10 }}>
+        <CamposCustom preguntas={formulario.preguntas||[]} vals={vals} setVals={setVals}/>
+        <button onClick={guardar} disabled={!reqsOk} className={reqsOk?"btn-press":""} style={{ width:"100%", background:reqsOk?`linear-gradient(135deg,${cfg.color},${cfg.color}cc)`:"rgba(45,106,79,0.08)", border:"none", borderRadius:16, padding:"14px", color:reqsOk?"white":T.mist, fontFamily:T.sans, fontWeight:600, fontSize:14, cursor:reqsOk?"pointer":"default", transition:"all 0.2s" }}>
+          {reqsOk ? "Guardar registro ✓" : "Completá los campos obligatorios (*)"}
+        </button>
+        <div style={{ height:16 }}/>
+      </div>
+    </div>
+  );
+}
+
+// ── Pantalla principal de Formularios ───────────────────────────
+function Formularios({ onUsarFormulario }) {
+  const [formularios, setFormularios] = useState(() => load("formularios_custom", []));
+  const [vista, setVista] = useState("lista"); // "lista" | "builder" | "detalle"
+  const [editando, setEditando] = useState(null);
+
+  const guardarFormulario = f => {
+    const existe = formularios.find(x => x.id === f.id);
+    const nuevos = existe ? formularios.map(x => x.id===f.id?f:x) : [...formularios, f];
+    setFormularios(nuevos);
+    save("formularios_custom", nuevos);
+    setVista("lista");
+    setEditando(null);
+  };
+
+  const eliminarFormulario = id => {
+    const nuevos = formularios.filter(f => f.id !== id);
+    setFormularios(nuevos);
+    save("formularios_custom", nuevos);
+    setVista("lista");
+    setEditando(null);
+  };
+
+  if (vista === "builder") {
+    return <BuilderFormulario formulario={editando} onGuardar={guardarFormulario} onVolver={() => { setVista("lista"); setEditando(null); }}/>;
+  }
+
+  if (vista === "detalle" && editando) {
+    const f = editando;
+    const cfg = BASE_TIPO_CFG[f.tipo] || BASE_TIPO_CFG.custom;
+    return (
+      <div style={{ flex:1, overflowY:"auto", background:T.surface }}>
+        <div style={{ padding:"14px 18px 12px", borderBottom:`1px solid rgba(45,106,79,0.07)`, position:"sticky", top:0, background:"rgba(244,250,246,0.97)", backdropFilter:"blur(12px)", zIndex:10 }}>
+          <button onClick={() => { setVista("lista"); setEditando(null); }} style={{ color:T.sage, fontFamily:T.sans, fontSize:12, background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:10, fontWeight:500 }}>‹ Formularios</button>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <IconBox icon={cfg.icon} bg={cfg.bg} size={40} radius={11} fontSize={18}/>
+            <div style={{ flex:1 }}>
+              <p style={{ color:cfg.color, fontFamily:T.mono, fontSize:8, letterSpacing:"0.14em", margin:0, opacity:0.65 }}>{cfg.label.toUpperCase()}</p>
+              <p style={{ color:T.forest, fontFamily:T.serif, fontSize:18, fontWeight:400, margin:0 }}>{f.nombre}</p>
+            </div>
+          </div>
+        </div>
+        <div style={{ padding:"14px 16px", display:"flex", flexDirection:"column", gap:10 }}>
+          {/* Stats */}
+          <div style={{ display:"flex", gap:8 }}>
+            {[["Preguntas",(f.preguntas||[]).length],["Versión",f.version||1],["Usos",f.usos||0]].map(([lbl,val]) => (
+              <div key={lbl} style={{ flex:1, background:"white", borderRadius:12, padding:"10px", textAlign:"center", border:`1px solid rgba(45,106,79,0.08)` }}>
+                <p style={{ color:T.forest, fontFamily:T.serif, fontSize:22, margin:0 }}>{val}</p>
+                <p style={{ color:T.mist, fontFamily:T.mono, fontSize:8, margin:0, letterSpacing:"0.06em" }}>{lbl.toUpperCase()}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Preview preguntas */}
+          <div style={{ background:"white", borderRadius:16, border:`1.5px solid rgba(45,106,79,0.08)`, overflow:"hidden", boxShadow:T.shadow }}>
+            <div style={{ padding:"12px 14px", borderBottom:`1px solid ${T.surface}` }}>
+              <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, letterSpacing:"0.14em", margin:0 }}>VISTA PREVIA</p>
+            </div>
+            {(f.preguntas||[]).map((p, i) => {
+              const pcfg = TIPO_PREGUNTA_CFG[p.tipo] || TIPO_PREGUNTA_CFG.texto;
+              return (
+                <div key={i} style={{ padding:"10px 14px", borderBottom:i<(f.preguntas||[]).length-1?`1px solid ${T.surface}`:"none", display:"flex", alignItems:"center", gap:10 }}>
+                  <span style={{ fontSize:13 }}>{pcfg.icon}</span>
+                  <div style={{ flex:1 }}>
+                    <p style={{ color:"#1a1a1a", fontFamily:T.sans, fontSize:12, fontWeight:500, margin:0 }}>{p.label||"Sin título"}</p>
+                    <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, margin:0 }}>{pcfg.label}{p.req?" · Obligatoria":""}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, margin:"4px 0 0", textAlign:"center", letterSpacing:"0.06em" }}>Modificado: {f.modificado||"—"}</p>
+
+          <button onClick={() => onUsarFormulario(f)} className="btn-press" style={{ width:"100%", background:`linear-gradient(135deg,${cfg.color},${cfg.color}cc)`, border:"none", borderRadius:14, padding:"13px", color:"white", fontFamily:T.sans, fontWeight:600, fontSize:14, cursor:"pointer" }}>
+            Usar este formulario →
+          </button>
+          <button onClick={() => { setEditando(f); setVista("builder"); }} className="btn-press" style={{ width:"100%", background:"white", border:`1.5px solid rgba(45,106,79,0.15)`, borderRadius:14, padding:"12px", color:T.moss, fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer" }}>
+            ✏ Editar preguntas
+          </button>
+          <button onClick={() => eliminarFormulario(f.id)} className="btn-press" style={{ width:"100%", background:T.dangerBg, border:"none", borderRadius:14, padding:"12px", color:T.danger, fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer" }}>
+            🗑 Eliminar formulario
+          </button>
+          <div style={{ height:16 }}/>
+        </div>
+      </div>
+    );
+  }
+
+  // ── LISTA ────────────────────────────────────────────────────
   return (
     <div style={{ flex:1, overflowY:"auto", background:T.surface }}>
       <div style={{ padding:"14px 18px 12px", borderBottom:`1px solid rgba(45,106,79,0.07)`, position:"sticky", top:0, background:"rgba(244,250,246,0.97)", backdropFilter:"blur(12px)", zIndex:10 }}>
-        {sel && <button onClick={() => setSel(null)} style={{ color:T.sage, fontFamily:T.sans, fontSize:12, background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:10, fontWeight:500 }}>‹ Plantillas</button>}
-        <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, letterSpacing:"0.2em", margin:"0 0 2px" }}>VERSIONADO</p>
+        <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, letterSpacing:"0.2em", margin:"0 0 2px" }}>CONSTRUCTOR</p>
         <h2 style={{ color:T.forest, fontFamily:T.serif, fontSize:22, fontWeight:400, margin:0 }}>
-          {sel ? form.nombre : <>Formularios <em style={{ color:T.moss }}>y plantillas</em></>}
+          Mis <em style={{ color:T.moss }}>formularios</em>
         </h2>
+        <p style={{ color:T.mist, fontFamily:T.sans, fontSize:11, margin:"4px 0 0", fontWeight:400 }}>Diseñá y guardá tus propias encuestas y censos</p>
       </div>
+
       <div style={{ padding:"14px 16px", display:"flex", flexDirection:"column", gap:10 }}>
-        {!sel ? (
-          <>
-            <div style={{ background:`linear-gradient(135deg,${T.forest},${T.moss})`, borderRadius:16, padding:"13px 16px" }}>
-              <p style={{ color:"rgba(255,255,255,0.6)", fontFamily:T.sans, fontSize:11, margin:0, lineHeight:1.6, fontWeight:400 }}>🔒 Los formularios bloqueados no se pueden modificar durante una campaña activa.</p>
-            </div>
-            {plantillas.map(f => (
-              <button key={f.id} onClick={() => setSel(f.id)} className="card-hover btn-press" style={{ background:"white", border:`1.5px solid ${f.bloqueado?"rgba(30,96,145,0.2)":"rgba(45,106,79,0.08)"}`, borderRadius:18, padding:"14px 16px", cursor:"pointer", textAlign:"left", boxShadow:T.shadow }}>
+        {/* Info banner */}
+        <div style={{ background:`linear-gradient(135deg,${T.forest},${T.moss})`, borderRadius:16, padding:"14px 16px" }}>
+          <p style={{ color:"rgba(255,255,255,0.55)", fontFamily:T.mono, fontSize:9, letterSpacing:"0.14em", margin:"0 0 4px" }}>CÓMO FUNCIONA</p>
+          <p style={{ color:"rgba(255,255,255,0.75)", fontFamily:T.sans, fontSize:11, margin:0, lineHeight:1.6, fontWeight:400 }}>Creá un formulario con tus preguntas → aparece en Inicio para usarlo en el campo → los registros se guardan en Historial.</p>
+        </div>
+
+        {formularios.length === 0 ? (
+          <div style={{ textAlign:"center", padding:"40px 0" }}>
+            <div style={{ fontSize:36, marginBottom:10, opacity:0.3 }}>📋</div>
+            <p style={{ color:T.mist, fontFamily:T.sans, fontSize:13, fontWeight:400 }}>Todavía no creaste ningún formulario</p>
+            <p style={{ color:"#ccc", fontFamily:T.sans, fontSize:11, marginBottom:20 }}>Tocá el botón de abajo para empezar</p>
+          </div>
+        ) : (
+          formularios.map(f => {
+            const cfg = BASE_TIPO_CFG[f.tipo] || BASE_TIPO_CFG.custom;
+            return (
+              <button key={f.id} onClick={() => { setEditando(f); setVista("detalle"); }} className="card-hover btn-press" style={{ background:"white", border:`1.5px solid rgba(45,106,79,0.08)`, borderRadius:18, padding:"14px 16px", cursor:"pointer", textAlign:"left", boxShadow:T.shadow }}>
                 <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                  <IconBox icon="📝" bg={f.bloqueado?"#d0e8f5":"#d8f3dc"} size={42} radius={12} fontSize={18}/>
+                  <IconBox icon={cfg.icon} bg={cfg.bg} size={42} radius={12} fontSize={18}/>
                   <div style={{ flex:1 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", marginBottom:4 }}>
                       <span style={{ color:T.forest, fontFamily:T.serif, fontSize:15 }}>{f.nombre}</span>
-                      <Badge variant={f.bloqueado?"blue":"green"} small>{f.bloqueado?"🔒 Bloqueado":"✅ Activo"}</Badge>
-                      <Badge variant="slate" small>v{f.version}</Badge>
+                      <Badge variant="slate" small>{cfg.label}</Badge>
                     </div>
-                    <p style={{ color:"#bbb", fontFamily:T.sans, fontSize:11, margin:0, fontWeight:400 }}>📍 {f.comunidad} · {f.usos} usos · {f.modificado}</p>
+                    <p style={{ color:"#bbb", fontFamily:T.sans, fontSize:11, margin:0, fontWeight:400 }}>
+                      {(f.preguntas||[]).length} pregunta{(f.preguntas||[]).length!==1?"s":""} · {f.usos||0} usos · v{f.version||1}
+                    </p>
                   </div>
                   <span style={{ color:T.mist, fontSize:18 }}>›</span>
                 </div>
               </button>
-            ))}
-            <button className="btn-press" style={{ border:`2px dashed rgba(45,106,79,0.2)`, borderRadius:16, padding:"14px", color:T.moss, fontFamily:T.sans, fontSize:13, fontWeight:500, background:"none", cursor:"pointer", textAlign:"center" }}>+ Nueva plantilla</button>
-          </>
-        ) : (
-          <div style={{ background:"white", borderRadius:18, padding:"16px", border:`1.5px solid rgba(45,106,79,0.08)`, boxShadow:T.shadow }}>
-            <div style={{ display:"flex", gap:10, marginBottom:12 }}>
-              <div style={{ flex:1, background:T.surface, borderRadius:12, padding:"10px", textAlign:"center", border:`1px solid rgba(45,106,79,0.08)` }}>
-                <p style={{ color:T.forest, fontFamily:T.serif, fontSize:26, margin:0 }}>v{form.version}</p>
-                <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, margin:"2px 0 0", letterSpacing:"0.08em" }}>VERSIÓN</p>
-              </div>
-              <div style={{ flex:1, background:form.bloqueado?"#d0e8f5":T.frost, borderRadius:12, padding:"10px", textAlign:"center", border:`1px solid ${form.bloqueado?"rgba(30,96,145,0.15)":"rgba(45,106,79,0.1)"}` }}>
-                <p style={{ color:form.bloqueado?"#1e6091":T.moss, fontFamily:T.sans, fontSize:13, fontWeight:700, margin:0 }}>{form.bloqueado?"🔒 Bloqueado":"✅ Activo"}</p>
-              </div>
-            </div>
-            <div style={{ background:T.surface, borderRadius:12, padding:"12px", marginBottom:12, border:`1px solid rgba(45,106,79,0.07)` }}>
-              <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, letterSpacing:"0.1em", margin:"0 0 6px" }}>DETALLES</p>
-              <p style={{ color:"#1a1a1a", fontFamily:T.sans, fontSize:13, margin:"0 0 3px" }}>📍 Comunidad: <strong style={{ fontWeight:600 }}>{form.comunidad}</strong></p>
-              <p style={{ color:"#1a1a1a", fontFamily:T.sans, fontSize:13, margin:"0 0 3px" }}>📋 Usos: <strong style={{ fontWeight:600 }}>{form.usos}</strong></p>
-              <p style={{ color:"#1a1a1a", fontFamily:T.sans, fontSize:13, margin:0 }}>📅 Modificado: <strong style={{ fontWeight:600 }}>{form.modificado}</strong></p>
-            </div>
-            {form.bloqueado
-              ? <button onClick={() => upd(plantillas.map(p=>p.id===form.id?{...p,bloqueado:false}:p))} className="btn-press" style={{ width:"100%", background:T.surface, border:`1.5px solid rgba(45,106,79,0.15)`, borderRadius:12, padding:"11px", color:T.moss, fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer" }}>🔓 Desbloquear</button>
-              : <button onClick={() => upd(plantillas.map(p=>p.id===form.id?{...p,bloqueado:true}:p))} className="btn-press" style={{ width:"100%", background:"#1e6091", border:"none", borderRadius:12, padding:"11px", color:"white", fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer" }}>🔒 Bloquear para campaña activa</button>
-            }
-          </div>
+            );
+          })
         )}
+
+        <button onClick={() => { setEditando(null); setVista("builder"); }} className="btn-press" style={{ border:`2px dashed rgba(45,106,79,0.22)`, borderRadius:18, padding:"16px", color:T.moss, fontFamily:T.sans, fontSize:13, fontWeight:500, background:"none", cursor:"pointer", textAlign:"center" }}>
+          + Crear nuevo formulario
+        </button>
         <div style={{ height:16 }}/>
       </div>
     </div>
@@ -1066,11 +1430,12 @@ function Formularios() {
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════
 export default function App() {
-  const [screen,     setScreen]     = useState("splash");
-  const [user,       setUser]       = useState(null);
-  const [tab,        setTab]        = useState("inicio");
-  const [tipoForm,   setTipoForm]   = useState(null);
-  const [pendientes, setPendientes] = useState(0);
+  const [screen,       setScreen]       = useState("splash");
+  const [user,         setUser]         = useState(null);
+  const [tab,          setTab]          = useState("inicio");
+  const [tipoForm,     setTipoForm]     = useState(null);
+  const [formCustom,   setFormCustom]   = useState(null); // formulario custom seleccionado
+  const [pendientes,   setPendientes]   = useState(0);
 
   const [online, setOnline] = useState(navigator.onLine);
   useEffect(() => {
@@ -1109,6 +1474,16 @@ export default function App() {
 
   const hoyCount = proyecto ? registros.filter(r => r.proyectoId===proyecto.id).length : 0;
 
+  // Formularios custom guardados (para mostrar botones en Inicio)
+  const [formulariosCust, setFormulariosCust] = useState(() => load("formularios_custom", []));
+  // Refrescar cuando vuelve de Formularios
+  const refrescarFormularios = () => setFormulariosCust(load("formularios_custom", []));
+
+  const usarFormulario = f => {
+    setFormCustom(f);
+    setTab("form_custom");
+  };
+
   const renderContent = () => {
     if (screen==="login") return <Login onLogin={u => { setUser(u); setScreen("app"); setTab("inicio"); }}/>;
     if (screen!=="app") return null;
@@ -1121,10 +1496,11 @@ export default function App() {
         onVolver={() => setTab("inicio")}/>
     );
     if (tab==="form"&&tipoForm) return <Formulario tipo={tipoForm} proyecto={proyecto} user={user} onGuardar={r=>addRegistro(r)} onBack={()=>{ setTipoForm(null); setTab("inicio"); }}/>;
+    if (tab==="form_custom"&&formCustom) return <RellenarFormularioCustom formulario={formCustom} proyecto={proyecto} user={user} onGuardar={r=>addRegistro(r)} onBack={()=>{ setFormCustom(null); setTab("inicio"); }}/>;
     if (tab==="historial") return <Historial registros={registros} proyecto={proyecto} onEditarRegistro={editRegistro} onEliminarRegistro={deleteRegistro}/>;
     if (tab==="qr") return <QRCliente proyectos={proyectos}/>;
-    if (tab==="formularios") return <Formularios/>;
-    return <Inicio user={user} proyecto={proyecto} registros={registros} online={online} pendientes={pendientes} onNav={tipo=>{ setTipoForm(tipo); setTab("form"); }} onVerProyectos={()=>setTab("proyectos")} onSincronizar={sincronizar} onExportar={exportar}/>;
+    if (tab==="formularios") return <Formularios onUsarFormulario={f => { refrescarFormularios(); usarFormulario(f); }}/>;
+    return <Inicio user={user} proyecto={proyecto} registros={registros} online={online} pendientes={pendientes} formulariosCust={formulariosCust} onNav={tipo=>{ setTipoForm(tipo); setTab("form"); }} onNavCustom={f=>{ setFormCustom(f); setTab("form_custom"); }} onVerProyectos={()=>setTab("proyectos")} onSincronizar={sincronizar} onExportar={exportar}/>;
   };
 
   // NAV items
@@ -1161,7 +1537,7 @@ export default function App() {
       <div style={{ flex:1, overflow:"hidden", display:"flex", flexDirection:"column" }}>{renderContent()}</div>
 
       {/* NAV BAR — rediseñada */}
-      {screen==="app" && tab!=="form" && tab!=="proyectos" && (
+      {screen==="app" && tab!=="form" && tab!=="form_custom" && tab!=="proyectos" && (
         <div style={{ height:66, background:"white", borderTop:`1px solid rgba(45,106,79,0.07)`, display:"flex", alignItems:"center", justifyContent:"space-around", flexShrink:0, boxShadow:"0 -6px 24px rgba(13,40,24,0.07)" }}>
           {NAV_ITEMS.map((t, i) =>
             t.fab ? (
