@@ -1,6 +1,62 @@
 import { useState, useEffect, useCallback } from "react";
 
 // ═══════════════════════════════════════════════════════════════
+// DESIGN TOKENS — sistema de diseño centralizado
+// ═══════════════════════════════════════════════════════════════
+const T = {
+  // Paleta refinada
+  forest:   "#0d2818",
+  pine:     "#1a3d28",
+  moss:     "#2d6a4f",
+  sage:     "#52b788",
+  mist:     "#95d5b2",
+  frost:    "#d8f3dc",
+  surface:  "#f4faf6",
+  
+  // Tipografía
+  serif:    "'Cormorant Garamond', Georgia, serif",
+  sans:     "'DM Sans', system-ui, sans-serif",
+  mono:     "'DM Mono', 'Courier New', monospace",
+  
+  // Alertas
+  danger:   "#c0392b",
+  dangerBg: "#fde8e8",
+  warn:     "#c67c1a",
+  warnBg:   "#fff4e0",
+  
+  // Sombras
+  shadow:   "0 2px 12px rgba(13,40,24,0.10)",
+  shadowMd: "0 6px 24px rgba(13,40,24,0.14)",
+  shadowLg: "0 12px 40px rgba(13,40,24,0.18)",
+};
+
+// ═══════════════════════════════════════════════════════════════
+// GLOBAL STYLES — inyectados una sola vez
+// ═══════════════════════════════════════════════════════════════
+const GLOBAL_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@300;400&display=swap');
+  
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
+  @keyframes shimmer { 0%{ background-position:-200% 0; } 100%{ background-position:200% 0; } }
+  @keyframes scaleIn { from{ transform:scale(0.94); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  
+  input::placeholder, textarea::placeholder { color: rgba(45,106,79,0.3); font-family: 'DM Sans', system-ui; }
+  input:focus, textarea:focus { outline: none !important; }
+  
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(82,183,136,0.3); border-radius: 3px; }
+  
+  .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(13,40,24,0.16) !important; }
+  .btn-press:active { transform: scale(0.97); }
+`;
+
+// ═══════════════════════════════════════════════════════════════
 // LOGO ANDINA — SVG puro, nunca borroso
 // ═══════════════════════════════════════════════════════════════
 function AndinaLogo({ size = "md", light = false, showSubtitle = true }) {
@@ -24,20 +80,20 @@ function AndinaLogo({ size = "md", light = false, showSubtitle = true }) {
   const nameY=base+s.name*1.55; const lineY=nameY+s.name*0.32; const subY=lineY+s.sub*2.0;
   return (
     <svg width={s.w} height={s.h} viewBox={`0 0 ${s.w} ${s.h}`} style={{ display:"block" }}>
-      <defs><style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400&family=Montserrat:wght@300&display=swap');`}</style></defs>
+      <defs><style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400&family=DM+Sans:wght@300&display=swap');`}</style></defs>
       <polygon points={`${l1x},${base} ${l1cx},${base-hLat} ${l1x2},${base}`} fill={v1} opacity="0.82"/>
       <polygon points={`${m1x},${base} ${cx},${base-hCen} ${m1x2},${base}`}   fill={v2}/>
       <polygon points={`${r1x},${base} ${r1cx},${base-hLat} ${r1x2},${base}`} fill={v1} opacity="0.82"/>
       <line x1={mL-4} y1={base} x2={mR+4} y2={base} stroke="#52b788" strokeWidth="0.8" opacity="0.3"/>
       <text x={cx} y={nameY} textAnchor="middle" fontFamily="'Cormorant Garamond',Georgia,serif" fontSize={s.name} fontWeight="400" fill={tc} letterSpacing={s.sp}>ANDINA</text>
       <line x1={cx-s.w*0.20} y1={lineY} x2={cx+s.w*0.20} y2={lineY} stroke="#52b788" strokeWidth="0.7" opacity="0.45"/>
-      {showSubtitle&&<text x={cx} y={subY} textAnchor="middle" fontFamily="'Montserrat',system-ui,sans-serif" fontSize={s.sub} fontWeight="300" fill={sc} letterSpacing={s.sp*0.75}>CONSULTORA SOCIOAMBIENTAL</text>}
+      {showSubtitle&&<text x={cx} y={subY} textAnchor="middle" fontFamily="'DM Sans',system-ui,sans-serif" fontSize={s.sub} fontWeight="300" fill={sc} letterSpacing={s.sp*0.75}>CONSULTORA SOCIOAMBIENTAL</text>}
     </svg>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PERSISTENCIA localStorage — con try/catch anti-crash
+// PERSISTENCIA localStorage
 // ═══════════════════════════════════════════════════════════════
 function save(key, data) {
   try { localStorage.setItem(`andina_${key}`, JSON.stringify(data)); } catch(e) { console.warn("Storage lleno:", e); }
@@ -47,53 +103,24 @@ function load(key, def) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORTACIÓN CSV — convierte registros a Excel-compatible
+// EXPORTACIÓN CSV
 // ═══════════════════════════════════════════════════════════════
 function exportarCSV(registros, proyectos) {
   if (!registros.length) return;
-
-  // Cabecera fija + todas las columnas posibles de valores
   const todosLosCampos = ["comunidad","punto","actividad","hogares","acceso_agua","servicios",
     "referente","impacto","ph","turbidez","oxigeno","conductividad","temperatura",
     "pm10","pm25","ruido","viento","cobertura","erosion","contaminantes","obs"];
-
-  const cabecera = [
-    "ID","Proyecto","Cliente","Tipo","Operador","Fecha/Hora","Alerta","Editado",
-    ...todosLosCampos
-  ];
-
+  const cabecera = ["ID","Proyecto","Cliente","Tipo","Operador","Fecha/Hora","Alerta","Editado",...todosLosCampos];
   const filas = registros.map(r => {
     const proy = proyectos.find(p => p.id === r.proyectoId) || {};
     const vals = r.valores || {};
-    return [
-      r.id,
-      proy.nombre || "",
-      proy.cliente || "",
-      r.tipo,
-      r.operador,
-      r.timestamp,
-      r.alerta ? `${r.alerta.nivel} - ${r.alerta.campo}` : "",
-      r.editado || "",
-      ...todosLosCampos.map(k => {
-        const v = vals[k] || "";
-        // Escapar comas y comillas para CSV
-        return `"${String(v).replace(/"/g,'""')}"`;
-      })
-    ];
+    return [r.id,proy.nombre||"",proy.cliente||"",r.tipo,r.operador,r.timestamp,r.alerta?`${r.alerta.nivel} - ${r.alerta.campo}`:"",r.editado||"",...todosLosCampos.map(k=>`"${String(vals[k]||"").replace(/"/g,'""')}"`)];
   });
-
-  const csvContent = [cabecera, ...filas]
-    .map(fila => fila.join(","))
-    .join("\n");
-
-  // BOM para que Excel detecte UTF-8 correctamente
-  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const csvContent = [cabecera,...filas].map(f=>f.join(",")).join("\n");
+  const blob = new Blob(["\uFEFF"+csvContent],{type:"text/csv;charset=utf-8;"});
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.href = url;
-  const fecha = new Date().toLocaleDateString("es-AR").replace(/\//g,"-");
-  link.download = `andina_registros_${fecha}.csv`;
-  link.click();
+  link.href=url; link.download=`andina_registros_${new Date().toLocaleDateString("es-AR").replace(/\//g,"-")}.csv`; link.click();
   URL.revokeObjectURL(url);
 }
 
@@ -111,16 +138,13 @@ const PROYECTOS_DEF = [
   { id:3, nombre:"EIA Cerro Negro",     cliente:"Andina Recursos",        campaña:"Q1 2026",    color:"#5c4a1e" },
 ];
 const TIPO_CFG = {
-  encuesta: { icon:"📋", label:"Encuesta Social",   color:"#1b4332", bg:"#d8f3dc" },
-  censo:    { icon:"🏘",  label:"Censo Comunitario", color:"#2d4a8a", bg:"#dce8ff" },
-  agua:     { icon:"💧", label:"Monitoreo Agua",    color:"#1e6091", bg:"#d0e8f5" },
-  aire:     { icon:"💨", label:"Monitoreo Aire",    color:"#5c4a1e", bg:"#f5ead0" },
-  suelo:    { icon:"🌱", label:"Monitoreo Suelo",   color:"#4a2c0a", bg:"#f0dfc8" },
+  encuesta: { icon:"📋", label:"Encuesta Social",   color:"#1b4332", bg:"#d8f3dc", accent:"#52b788" },
+  censo:    { icon:"🏘",  label:"Censo Comunitario", color:"#2d4a8a", bg:"#dce8ff", accent:"#6b8cda" },
+  agua:     { icon:"💧", label:"Monitoreo Agua",    color:"#1e6091", bg:"#d0e8f5", accent:"#4ea8d4" },
+  aire:     { icon:"💨", label:"Monitoreo Aire",    color:"#5c4a1e", bg:"#f5ead0", accent:"#c9954a" },
+  suelo:    { icon:"🌱", label:"Monitoreo Suelo",   color:"#4a2c0a", bg:"#f0dfc8", accent:"#a0724e" },
 };
 
-// ═══════════════════════════════════════════════════════════════
-// NORMATIVA AMBIENTAL ARGENTINA — semáforo legal
-// ═══════════════════════════════════════════════════════════════
 const NORMATIVA = {
   agua: {
     ph:           { min:6.5, max:8.5,  norma:"Ley 25.688 Art. 6°",      unidad:"" },
@@ -189,12 +213,10 @@ const CAMPOS = {
 function ahora() { return new Date().toLocaleString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
 function horaCorta() { return new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}); }
 
-// SEMÁFORO: null | "alerta" | "critico"
 function checkAlerta(tipo, nk, val) {
   const r = NORMATIVA[tipo]?.[nk];
   if (!r || !val) return null;
-  const v = parseFloat(val);
-  if (isNaN(v)) return null;
+  const v = parseFloat(val); if (isNaN(v)) return null;
   const fuera = (r.max && v > r.max) || (r.min && v < r.min);
   if (fuera) return "critico";
   const cerca = (r.max && v > r.max * 0.88) || (r.min && v < r.min * 1.15);
@@ -202,15 +224,46 @@ function checkAlerta(tipo, nk, val) {
   return null;
 }
 
-// Color e ícono del semáforo
 function semaforoUI(nivel) {
-  if (nivel === "critico") return { bg:"#fde8e8", border:"rgba(192,57,43,0.35)", dot:"#c0392b", label:"🔴 Fuera de norma" };
-  if (nivel === "alerta")  return { bg:"#fef3cd", border:"rgba(230,168,23,0.35)", dot:"#e6a817", label:"🟡 Cerca del límite" };
-  return { bg:"white", border:"rgba(0,0,0,0.1)", dot:null, label:null };
+  if (nivel === "critico") return { bg:"#fde8e8", border:"rgba(192,57,43,0.3)", dot:"#c0392b", label:"Fuera de norma" };
+  if (nivel === "alerta")  return { bg:"#fff4e0", border:"rgba(198,124,26,0.3)", dot:"#c67c1a", label:"Cerca del límite" };
+  return { bg:"white", border:"rgba(45,106,79,0.12)", dot:null, label:null };
 }
 
 // ═══════════════════════════════════════════════════════════════
-// CAMPOS DEL FORMULARIO — componente compartido
+// UI PRIMITIVES
+// ═══════════════════════════════════════════════════════════════
+function Badge({ children, variant="green", small=false }) {
+  const variants = {
+    green:  { bg:"#d8f3dc", color:"#1b4332" },
+    blue:   { bg:"#dce8ff", color:"#1e3a6e" },
+    red:    { bg:"#fde8e8", color:"#c0392b" },
+    amber:  { bg:"#fff4e0", color:"#c67c1a" },
+    slate:  { bg:"rgba(45,106,79,0.08)", color:"#2d6a4f" },
+    dark:   { bg:"rgba(13,40,24,0.7)", color:"white" },
+  };
+  const v = variants[variant] || variants.green;
+  return (
+    <span style={{ background:v.bg, color:v.color, fontFamily:T.sans, fontSize:small?8:9, fontWeight:600, padding:small?"1px 6px":"2px 8px", borderRadius:6, letterSpacing:"0.04em", display:"inline-flex", alignItems:"center", gap:3 }}>
+      {children}
+    </span>
+  );
+}
+
+function Divider({ vertical=false, style={} }) {
+  return <div style={{ [vertical?"width":"height"]:1, background:"rgba(45,106,79,0.08)", ...style }}/>;
+}
+
+function IconBox({ icon, size=40, bg="#d8f3dc", radius=12, fontSize=18 }) {
+  return (
+    <div style={{ width:size, height:size, borderRadius:radius, background:bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize, flexShrink:0 }}>
+      {icon}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CAMPOS DEL FORMULARIO
 // ═══════════════════════════════════════════════════════════════
 function CamposFormulario({ tipo, vals, setVals }) {
   const cfg = TIPO_CFG[tipo];
@@ -220,57 +273,56 @@ function CamposFormulario({ tipo, vals, setVals }) {
   return (
     <>
       {criticos > 0 && (
-        <div style={{ background:"#fde8e8", border:"1.5px solid rgba(192,57,43,0.25)", borderRadius:14, padding:"10px 14px", display:"flex", alignItems:"center", gap:8 }}>
-          <span style={{ fontSize:18 }}>🚨</span>
-          <p style={{ color:"#c0392b", fontFamily:"system-ui", fontSize:11, fontWeight:700, margin:0 }}>
+        <div style={{ background:T.dangerBg, border:`1.5px solid rgba(192,57,43,0.2)`, borderRadius:14, padding:"12px 16px", display:"flex", alignItems:"center", gap:10, animation:"scaleIn 0.2s ease" }}>
+          <span style={{ fontSize:16 }}>🚨</span>
+          <p style={{ color:T.danger, fontFamily:T.sans, fontSize:12, fontWeight:600, margin:0 }}>
             {criticos} parámetro{criticos>1?"s":""} fuera de normativa legal
           </p>
         </div>
       )}
+
       {campos.map(c => {
         const nivel = c.nk ? checkAlerta(tipo, c.nk, vals[c.id]) : null;
         const sem = semaforoUI(nivel);
         const norm = NORMATIVA[tipo]?.[c.nk];
         return (
-          <div key={c.id}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5 }}>
-              <p style={{ color:cfg.color, fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.12em", margin:0 }}>
+          <div key={c.id} style={{ display:"flex", flexDirection:"column", gap:6 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <label style={{ color:cfg.color, fontFamily:T.sans, fontSize:10, fontWeight:600, letterSpacing:"0.08em", opacity:0.8 }}>
                 {c.label.toUpperCase()} {c.req && <span style={{ color:"#e07070" }}>*</span>}
-              </p>
+              </label>
               {norm && (
-                <span style={{ background:cfg.bg, color:cfg.color, fontFamily:"system-ui", fontSize:9, padding:"1px 8px", borderRadius:8, opacity:0.85 }}>
+                <span style={{ background:cfg.bg, color:cfg.color, fontFamily:T.mono, fontSize:9, padding:"2px 8px", borderRadius:6, opacity:0.85 }}>
                   {norm.min && norm.max ? `${norm.min}–${norm.max}` : norm.min ? `≥ ${norm.min}` : `≤ ${norm.max}`} {norm.unidad}
                 </span>
               )}
             </div>
 
             {c.tipo === "yesno" ? (
-              <div style={{ display:"flex", gap:8 }}>
+              <div style={{ display:"flex", gap:6 }}>
                 {["Sí","No","Parcialmente"].map(o => (
-                  <button key={o} onClick={() => setVals(v => ({...v, [c.id]:o}))}
-                    style={{ flex:1, padding:"11px", borderRadius:12, border:`1.5px solid ${vals[c.id]===o ? cfg.color : "rgba(0,0,0,0.1)"}`, background:vals[c.id]===o ? cfg.color : "white", color:vals[c.id]===o ? "white" : "#555", fontFamily:"system-ui", fontSize:12, fontWeight:vals[c.id]===o?700:400, cursor:"pointer" }}>{o}
+                  <button key={o} onClick={() => setVals(v => ({...v, [c.id]:o}))} className="btn-press"
+                    style={{ flex:1, padding:"10px 8px", borderRadius:10, border:`1.5px solid ${vals[c.id]===o ? cfg.color : "rgba(45,106,79,0.12)"}`, background:vals[c.id]===o ? cfg.color : "white", color:vals[c.id]===o ? "white" : "#555", fontFamily:T.sans, fontSize:12, fontWeight:vals[c.id]===o?600:400, cursor:"pointer", transition:"all 0.15s" }}>{o}
                   </button>
                 ))}
               </div>
             ) : c.area ? (
               <textarea value={vals[c.id]||""} onChange={e => setVals(v => ({...v,[c.id]:e.target.value}))} placeholder={c.ph} rows={3}
-                style={{ width:"100%", background:"white", border:"1.5px solid rgba(0,0,0,0.1)", borderRadius:12, padding:"11px 14px", fontFamily:"system-ui", fontSize:13, outline:"none", resize:"none", boxSizing:"border-box" }}/>
+                style={{ width:"100%", background:"white", border:"1.5px solid rgba(45,106,79,0.12)", borderRadius:12, padding:"11px 14px", fontFamily:T.sans, fontSize:13, resize:"none", boxSizing:"border-box", color:"#1a1a1a", transition:"border-color 0.2s" }}/>
             ) : (
               <div style={{ position:"relative" }}>
                 <input type={c.num?"number":"text"} value={vals[c.id]||""} onChange={e => setVals(v => ({...v,[c.id]:e.target.value}))} placeholder={c.ph}
-                  style={{ width:"100%", background:sem.bg, border:`1.5px solid ${vals[c.id] ? (nivel ? sem.border : cfg.color+"55") : "rgba(0,0,0,0.1)"}`, borderRadius:12, padding:"11px 14px", fontFamily:"system-ui", fontSize:14, outline:"none", boxSizing:"border-box", color:"#1a1a1a", transition:"all 0.2s" }}/>
+                  style={{ width:"100%", background:sem.bg, border:`1.5px solid ${vals[c.id] ? (nivel ? sem.border : cfg.color+"55") : "rgba(45,106,79,0.12)"}`, borderRadius:12, padding:"11px 14px", paddingRight:nivel?"36px":"14px", fontFamily:T.sans, fontSize:14, boxSizing:"border-box", color:"#1a1a1a", transition:"all 0.2s" }}/>
                 {sem.dot && (
-                  <div style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", width:10, height:10, borderRadius:"50%", background:sem.dot }}/>
+                  <div style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", width:8, height:8, borderRadius:"50%", background:sem.dot, animation:"pulse 1.5s ease infinite" }}/>
                 )}
               </div>
             )}
 
             {nivel && norm && (
-              <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:4 }}>
-                <p style={{ color: nivel==="critico" ? "#c0392b" : "#b7860a", fontFamily:"system-ui", fontSize:10, margin:0, fontWeight:700 }}>
-                  {sem.label} · {norm.norma}
-                </p>
-              </div>
+              <p style={{ color: nivel==="critico" ? T.danger : T.warn, fontFamily:T.sans, fontSize:10, margin:0, fontWeight:600, paddingLeft:2 }}>
+                {nivel==="critico"?"🔴":"🟡"} {sem.label} · <span style={{ fontFamily:T.mono, fontSize:9 }}>{norm.norma}</span>
+              </p>
             )}
           </div>
         );
@@ -294,24 +346,27 @@ function Splash({ onDone }) {
     return () => ts.forEach(clearTimeout);
   }, []);
   return (
-    <div style={{ position:"fixed", inset:0, zIndex:999, background:"#1b4332", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", opacity:ph===3?0:1, transition:ph===3?"opacity 0.8s":"none", overflow:"hidden" }}>
-      <div style={{ position:"absolute", top:-120, right:-120, width:340, height:340, borderRadius:"50%", background:"rgba(82,183,136,0.06)" }}/>
-      <div style={{ opacity:ph>=0?1:0, transform:ph>=0?"scale(1) translateY(0)":"scale(0.8) translateY(24px)", transition:"all 1s cubic-bezier(0.34,1.4,0.64,1)", display:"flex", flexDirection:"column", alignItems:"center" }}>
+    <div style={{ position:"fixed", inset:0, zIndex:999, background:`linear-gradient(160deg, ${T.forest} 0%, ${T.pine} 60%, #1a4a32 100%)`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", opacity:ph===3?0:1, transition:ph===3?"opacity 0.8s":"none", overflow:"hidden" }}>
+      {/* Decorative circles */}
+      <div style={{ position:"absolute", top:-100, right:-100, width:320, height:320, borderRadius:"50%", background:"rgba(82,183,136,0.05)", border:"1px solid rgba(82,183,136,0.08)" }}/>
+      <div style={{ position:"absolute", bottom:-60, left:-60, width:200, height:200, borderRadius:"50%", background:"rgba(82,183,136,0.04)" }}/>
+      
+      <div style={{ opacity:ph>=0?1:0, transform:ph>=0?"scale(1) translateY(0)":"scale(0.85) translateY(24px)", transition:"all 1s cubic-bezier(0.34,1.4,0.64,1)", display:"flex", flexDirection:"column", alignItems:"center" }}>
         <AndinaLogo size="xl" showSubtitle={ph>=1}/>
       </div>
-      <div style={{ position:"absolute", bottom:60, left:"20%", right:"20%", opacity:ph>=2?1:0, transition:"opacity 0.5s" }}>
-        <div style={{ width:"100%", height:2, background:"rgba(255,255,255,0.07)", borderRadius:2, overflow:"hidden" }}>
-          <div style={{ height:"100%", width:ph>=2?"100%":"0%", background:"linear-gradient(90deg,#2d6a4f,#52b788)", transition:"width 1.2s ease", borderRadius:2 }}/>
+      
+      <div style={{ position:"absolute", bottom:64, left:"20%", right:"20%", opacity:ph>=2?1:0, transition:"opacity 0.6s" }}>
+        <div style={{ width:"100%", height:1.5, background:"rgba(255,255,255,0.06)", borderRadius:2, overflow:"hidden" }}>
+          <div style={{ height:"100%", width:ph>=2?"100%":"0%", background:"linear-gradient(90deg,transparent,#52b788,transparent)", backgroundSize:"200% 100%", transition:"width 1.2s ease", borderRadius:2, animation:ph>=2?"shimmer 1.5s ease infinite":"none" }}/>
         </div>
-        <p style={{ color:"rgba(255,255,255,0.2)", fontFamily:"system-ui", fontSize:9, textAlign:"center", marginTop:8, letterSpacing:"0.15em" }}>v4.0 PRO</p>
+        <p style={{ color:"rgba(255,255,255,0.18)", fontFamily:T.mono, fontSize:9, textAlign:"center", marginTop:10, letterSpacing:"0.2em" }}>v5.0 · CAMPO DIGITAL</p>
       </div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// LOGIN — validación real de credenciales
+// LOGIN
 // ═══════════════════════════════════════════════════════════════
 function Login({ onLogin }) {
   const [u, setU] = useState(""); const [p, setP] = useState("");
@@ -330,29 +385,40 @@ function Login({ onLogin }) {
   };
 
   return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", background:"linear-gradient(160deg,#0a1a0f,#1b4332,#2d6a4f)", opacity:vis?1:0, transform:vis?"translateY(0)":"translateY(20px)", transition:"all 0.6s", position:"relative", overflow:"hidden" }}>
-      <div style={{ position:"absolute", top:-80, right:-80, width:220, height:220, borderRadius:"50%", background:"rgba(82,183,136,0.07)" }}/>
-      <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 28px", position:"relative" }}>
-        <div style={{ marginBottom:24 }}><AndinaLogo size="lg" showSubtitle={true}/></div>
-        <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10 }}>
-          {[["USUARIO",u,setU,"text","Tu nombre"],["CONTRASEÑA",p,setP,"password","••••••••"]].map(([lbl,val,set,type,ph]) => (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:`linear-gradient(160deg,${T.forest} 0%,${T.pine} 55%,#234d35 100%)`, opacity:vis?1:0, transform:vis?"translateY(0)":"translateY(16px)", transition:"all 0.5s", position:"relative", overflow:"hidden" }}>
+      <div style={{ position:"absolute", top:-60, right:-60, width:200, height:200, borderRadius:"50%", background:"rgba(82,183,136,0.06)", border:"1px solid rgba(82,183,136,0.08)" }}/>
+      <div style={{ position:"absolute", bottom:80, left:-40, width:140, height:140, borderRadius:"50%", background:"rgba(82,183,136,0.04)" }}/>
+      
+      <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 28px", position:"relative", gap:0 }}>
+        <div style={{ marginBottom:32 }}><AndinaLogo size="lg" showSubtitle={true}/></div>
+        
+        <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:12 }}>
+          {[["USUARIO",u,setU,"text","Tu nombre de acceso"],["CONTRASEÑA",p,setP,"password","••••••"]].map(([lbl,val,set,type,ph]) => (
             <div key={lbl}>
-              <p style={{ color:"rgba(255,255,255,0.35)", fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.18em", margin:"0 0 5px" }}>{lbl}</p>
+              <p style={{ color:"rgba(255,255,255,0.3)", fontFamily:T.sans, fontSize:9, fontWeight:600, letterSpacing:"0.16em", margin:"0 0 6px" }}>{lbl}</p>
               <input value={val} onChange={e => set(e.target.value)} type={type} placeholder={ph} onKeyDown={e => e.key==="Enter"&&handle()}
-                style={{ width:"100%", background:"rgba(255,255,255,0.07)", border:`1.5px solid ${val?"rgba(82,183,136,0.4)":"rgba(255,255,255,0.12)"}`, borderRadius:14, padding:"13px 16px", color:"white", fontFamily:"system-ui", fontSize:14, outline:"none", boxSizing:"border-box" }}/>
+                style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:`1.5px solid ${val?"rgba(82,183,136,0.45)":"rgba(255,255,255,0.1)"}`, borderRadius:14, padding:"13px 16px", color:"white", fontFamily:T.sans, fontSize:14, boxSizing:"border-box", transition:"border-color 0.2s", letterSpacing:type==="password"?"0.1em":"normal" }}/>
             </div>
           ))}
-          {err && <p style={{ color:"#f4a261", fontFamily:"system-ui", fontSize:12, textAlign:"center", margin:0 }}>{err}</p>}
-          <button onClick={handle} style={{ width:"100%", marginTop:6, background:loading?"rgba(82,183,136,0.3)":"linear-gradient(135deg,#52b788,#2d6a4f)", border:"none", borderRadius:14, padding:"14px", color:"white", fontFamily:"system-ui", fontWeight:700, fontSize:15, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
-            {loading ? <><div style={{ width:16, height:16, borderRadius:"50%", border:"2px solid rgba(255,255,255,0.3)", borderTopColor:"white", animation:"spin 0.8s linear infinite" }}/>Verificando…</> : "Ingresar →"}
+          
+          {err && (
+            <div style={{ background:"rgba(192,57,43,0.15)", border:"1px solid rgba(192,57,43,0.25)", borderRadius:10, padding:"8px 14px", animation:"scaleIn 0.2s ease" }}>
+              <p style={{ color:"#f1948a", fontFamily:T.sans, fontSize:12, textAlign:"center", margin:0 }}>{err}</p>
+            </div>
+          )}
+          
+          <button onClick={handle} className="btn-press" style={{ width:"100%", marginTop:4, background:loading?"rgba(82,183,136,0.25)":"linear-gradient(135deg,#52b788,#2d6a4f)", border:"none", borderRadius:14, padding:"14px", color:"white", fontFamily:T.sans, fontWeight:600, fontSize:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, transition:"all 0.2s", letterSpacing:"0.02em" }}>
+            {loading
+              ? <><div style={{ width:14, height:14, borderRadius:"50%", border:"2px solid rgba(255,255,255,0.25)", borderTopColor:"white", animation:"spin 0.8s linear infinite" }}/>Verificando…</>
+              : <span>Ingresar <span style={{ opacity:0.6, marginLeft:2 }}>→</span></span>
+            }
           </button>
         </div>
-        <p style={{ color:"rgba(255,255,255,0.15)", fontFamily:"system-ui", fontSize:10, marginTop:20, letterSpacing:"0.1em" }}>ACCESO RESTRINGIDO · EQUIPO AUTORIZADO</p>
-        <div style={{ marginTop:8, background:"rgba(255,255,255,0.05)", borderRadius:10, padding:"8px 16px", border:"1px solid rgba(255,255,255,0.1)" }}>
-          <p style={{ color:"rgba(255,255,255,0.3)", fontFamily:"system-ui", fontSize:10, margin:0, textAlign:"center" }}>Demo → Gonzalo / 1234 · Carlos / 1234 · Laura / 1234</p>
+        
+        <div style={{ marginTop:28, display:"flex", justifyContent:"center", width:"100%" }}>
+          <p style={{ color:"rgba(255,255,255,0.12)", fontFamily:T.mono, fontSize:9, letterSpacing:"0.16em", margin:0 }}>ACCESO RESTRINGIDO · EQUIPO AUTORIZADO</p>
         </div>
       </div>
-      <style>{`input::placeholder{color:rgba(255,255,255,0.2)}`}</style>
     </div>
   );
 }
@@ -366,68 +432,72 @@ function Inicio({ user, proyecto, registros, online, pendientes, onNav, onVerPro
   const totalTodos = registros.length;
 
   return (
-    <div style={{ flex:1, overflowY:"auto", background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
-      <div style={{ padding:"14px 18px 10px" }}>
-        {/* TOPBAR */}
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+    <div style={{ flex:1, overflowY:"auto", background:T.surface }}>
+      {/* HEADER */}
+      <div style={{ padding:"16px 18px 14px", background:"white", borderBottom:`1px solid rgba(45,106,79,0.07)` }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:11 }}>
             <AndinaLogo size="sm" light={true} showSubtitle={false}/>
             <div>
-              <p style={{ color:"#74c69d", fontFamily:"system-ui", fontSize:10, margin:0 }}>Hola, {user.nombre} <span style={{ opacity:0.6 }}>· {user.rol}</span></p>
-              <p style={{ color:"#1b4332", fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:13, margin:0, letterSpacing:1 }}>
-                Campo <span style={{ fontStyle:"italic", color:"#2d6a4f" }}>Digital</span>
+              <p style={{ color:T.sage, fontFamily:T.sans, fontSize:10, margin:0, fontWeight:400, opacity:0.9 }}>
+                Hola, <strong style={{ fontWeight:600 }}>{user.nombre}</strong> <span style={{ opacity:0.5 }}>· {user.rol}</span>
+              </p>
+              <p style={{ color:T.forest, fontFamily:T.serif, fontSize:13, margin:0, letterSpacing:"0.5px" }}>
+                Campo <em style={{ color:T.moss }}>Digital</em>
               </p>
             </div>
           </div>
-          <button onClick={onVerProyectos} style={{ background:"rgba(45,106,79,0.08)", border:"1px solid rgba(45,106,79,0.15)", borderRadius:10, padding:"6px 12px", cursor:"pointer" }}>
-            <span style={{ color:"#52b788", fontFamily:"system-ui", fontSize:10, fontWeight:600 }}>⚙ Proyectos</span>
+          <button onClick={onVerProyectos} className="btn-press" style={{ background:T.surface, border:`1px solid rgba(45,106,79,0.15)`, borderRadius:10, padding:"6px 12px", cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}>
+            <span style={{ fontSize:11 }}>⚙</span>
+            <span style={{ color:T.moss, fontFamily:T.sans, fontSize:10, fontWeight:600 }}>Proyectos</span>
           </button>
         </div>
 
-        {/* PROYECTO ACTIVO */}
-        <div style={{ background:`linear-gradient(135deg,${proyecto.color},${proyecto.color}cc)`, borderRadius:20, padding:"14px 16px", boxShadow:`0 6px 24px ${proyecto.color}44`, marginBottom:8 }}>
-          <p style={{ color:"rgba(255,255,255,0.4)", fontFamily:"system-ui", fontSize:8, fontWeight:700, letterSpacing:"0.2em", margin:"0 0 2px" }}>PROYECTO ACTIVO</p>
-          <p style={{ color:"white", fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, margin:0, fontWeight:400 }}>{proyecto.nombre}</p>
-          <p style={{ color:"rgba(255,255,255,0.5)", fontFamily:"system-ui", fontSize:11, margin:"3px 0 10px" }}>{proyecto.cliente} · {proyecto.campaña}</p>
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-            <span style={{ background:"rgba(255,255,255,0.14)", color:"white", fontFamily:"system-ui", fontSize:10, padding:"3px 10px", borderRadius:8 }}>📋 {hoy.length} registros</span>
-            {alertasHoy > 0 && <span style={{ background:"rgba(192,57,43,0.4)", color:"white", fontFamily:"system-ui", fontSize:10, fontWeight:700, padding:"3px 10px", borderRadius:8 }}>🚨 {alertasHoy} alerta{alertasHoy>1?"s":""}</span>}
-            {!online && pendientes > 0 && <span style={{ background:"rgba(230,168,23,0.4)", color:"white", fontFamily:"system-ui", fontSize:10, fontWeight:700, padding:"3px 10px", borderRadius:8 }}>⏳ {pendientes} pendiente{pendientes>1?"s":""}</span>}
+        {/* PROYECTO ACTIVO — card elevada */}
+        <div style={{ background:`linear-gradient(135deg,${proyecto.color} 0%,${proyecto.color}e8 100%)`, borderRadius:18, padding:"16px", boxShadow:`0 8px 28px ${proyecto.color}40`, position:"relative", overflow:"hidden" }}>
+          <div style={{ position:"absolute", top:-20, right:-20, width:100, height:100, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }}/>
+          <p style={{ color:"rgba(255,255,255,0.45)", fontFamily:T.mono, fontSize:8, fontWeight:400, letterSpacing:"0.2em", margin:"0 0 3px" }}>PROYECTO ACTIVO</p>
+          <p style={{ color:"white", fontFamily:T.serif, fontSize:19, margin:0, fontWeight:400, lineHeight:1.2 }}>{proyecto.nombre}</p>
+          <p style={{ color:"rgba(255,255,255,0.45)", fontFamily:T.sans, fontSize:11, margin:"4px 0 12px" }}>{proyecto.cliente} · {proyecto.campaña}</p>
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+            <span style={{ background:"rgba(255,255,255,0.12)", color:"white", fontFamily:T.sans, fontSize:10, fontWeight:500, padding:"4px 10px", borderRadius:8 }}>📋 {hoy.length} registros</span>
+            {alertasHoy > 0 && <span style={{ background:"rgba(192,57,43,0.35)", color:"white", fontFamily:T.sans, fontSize:10, fontWeight:600, padding:"4px 10px", borderRadius:8 }}>🚨 {alertasHoy} alerta{alertasHoy>1?"s":""}</span>}
+            {!online && pendientes > 0 && <span style={{ background:"rgba(198,124,26,0.35)", color:"white", fontFamily:T.sans, fontSize:10, fontWeight:600, padding:"4px 10px", borderRadius:8 }}>⏳ {pendientes} pend.</span>}
           </div>
         </div>
+      </div>
 
-        {/* BANNER OFFLINE */}
+      <div style={{ padding:"14px 16px 0" }}>
+        {/* OFFLINE BANNER */}
         {!online && pendientes > 0 && (
-          <div style={{ background:"rgba(230,168,23,0.1)", border:"1px solid rgba(230,168,23,0.3)", borderRadius:12, padding:"8px 12px", display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-            <span>⚠️</span>
-            <span style={{ color:"#b7860a", fontFamily:"system-ui", fontSize:11, flex:1, fontWeight:600 }}>Sin señal · {pendientes} registro{pendientes>1?"s":""} guardado{pendientes>1?"s":""} localmente</span>
-            <button onClick={onSincronizar} style={{ background:"#e6a817", border:"none", borderRadius:8, padding:"4px 10px", color:"white", fontFamily:"system-ui", fontSize:10, fontWeight:700, cursor:"pointer" }}>Sync</button>
+          <div style={{ background:"#fff9ed", border:`1px solid rgba(198,124,26,0.25)`, borderRadius:12, padding:"10px 14px", display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+            <span style={{ fontSize:14 }}>⚠️</span>
+            <span style={{ color:"#a06010", fontFamily:T.sans, fontSize:11, flex:1, fontWeight:500 }}>Sin señal · {pendientes} registro{pendientes>1?"s":""} guardado{pendientes>1?"s":""} localmente</span>
+            <button onClick={onSincronizar} className="btn-press" style={{ background:"#c67c1a", border:"none", borderRadius:8, padding:"5px 12px", color:"white", fontFamily:T.sans, fontSize:10, fontWeight:600, cursor:"pointer" }}>Sync</button>
           </div>
         )}
 
-        {/* BOTÓN EXPORTAR CSV */}
-        <button onClick={onExportar} style={{ width:"100%", background:"white", border:"1.5px solid rgba(45,106,79,0.2)", borderRadius:14, padding:"11px 16px", display:"flex", alignItems:"center", gap:12, cursor:"pointer", marginBottom:12, boxShadow:"0 2px 8px rgba(27,67,50,0.06)" }}>
-          <div style={{ width:36, height:36, borderRadius:10, background:"#d8f3dc", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>📊</div>
+        {/* EXPORTAR */}
+        <button onClick={onExportar} className="card-hover btn-press" style={{ width:"100%", background:"white", border:`1.5px solid rgba(45,106,79,0.1)`, borderRadius:14, padding:"12px 14px", display:"flex", alignItems:"center", gap:12, cursor:"pointer", marginBottom:14, boxShadow:T.shadow }}>
+          <IconBox icon="📊" bg="#d8f3dc" radius={10} size={38} fontSize={16}/>
           <div style={{ textAlign:"left", flex:1 }}>
-            <p style={{ color:"#1b4332", fontFamily:"system-ui", fontSize:13, fontWeight:700, margin:0 }}>Exportar a Excel / CSV</p>
-            <p style={{ color:"#74c69d", fontFamily:"system-ui", fontSize:10, margin:0 }}>{totalTodos} registro{totalTodos!==1?"s":""} en total · Descargá y enviá por mail</p>
+            <p style={{ color:T.forest, fontFamily:T.sans, fontSize:13, fontWeight:600, margin:0 }}>Exportar a Excel / CSV</p>
+            <p style={{ color:T.mist, fontFamily:T.sans, fontSize:10, margin:"1px 0 0", fontWeight:400 }}>{totalTodos} registro{totalTodos!==1?"s":""} en total</p>
           </div>
-          <span style={{ color:"#52b788", fontSize:20 }}>↓</span>
+          <span style={{ color:T.sage, fontSize:16, fontWeight:300 }}>↓</span>
         </button>
-      </div>
 
-      {/* TIPOS DE REGISTRO */}
-      <div style={{ padding:"0 16px 24px" }}>
-        <p style={{ color:"#52b788", fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.2em", margin:"0 0 8px" }}>REGISTRAR</p>
-        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {/* SECCIÓN REGISTRAR */}
+        <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, fontWeight:400, letterSpacing:"0.2em", margin:"0 0 10px", paddingLeft:2 }}>REGISTRAR</p>
+        <div style={{ display:"flex", flexDirection:"column", gap:8, paddingBottom:24 }}>
           {Object.entries(TIPO_CFG).map(([id, cfg]) => {
             const count = hoy.filter(r => r.tipo === id).length;
             return (
-              <button key={id} onClick={() => onNav(id)} style={{ background:`linear-gradient(135deg,${cfg.color},${cfg.color}dd)`, border:"none", borderRadius:16, padding:"12px 14px", display:"flex", alignItems:"center", gap:12, cursor:"pointer", boxShadow:`0 4px 14px ${cfg.color}33` }}>
-                <div style={{ width:40, height:40, borderRadius:11, background:"rgba(255,255,255,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>{cfg.icon}</div>
-                <p style={{ color:"white", fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, margin:0, fontWeight:400, flex:1, textAlign:"left", letterSpacing:0.5 }}>{cfg.label}</p>
-                {count > 0 && <span style={{ background:"rgba(255,255,255,0.2)", color:"white", fontFamily:"system-ui", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:8 }}>{count} hoy</span>}
-                <span style={{ color:"rgba(255,255,255,0.35)", fontSize:18 }}>›</span>
+              <button key={id} onClick={() => onNav(id)} className="btn-press" style={{ background:`linear-gradient(135deg,${cfg.color} 0%,${cfg.color}dd 100%)`, border:"none", borderRadius:16, padding:"13px 14px", display:"flex", alignItems:"center", gap:12, cursor:"pointer", boxShadow:`0 4px 16px ${cfg.color}2a`, textAlign:"left" }}>
+                <div style={{ width:42, height:42, borderRadius:12, background:"rgba(255,255,255,0.1)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>{cfg.icon}</div>
+                <p style={{ color:"white", fontFamily:T.serif, fontSize:17, margin:0, fontWeight:400, flex:1, letterSpacing:"0.3px" }}>{cfg.label}</p>
+                {count > 0 && <Badge variant="dark" small>{count} hoy</Badge>}
+                <span style={{ color:"rgba(255,255,255,0.3)", fontSize:18, fontWeight:300 }}>›</span>
               </button>
             );
           })}
@@ -438,7 +508,7 @@ function Inicio({ user, proyecto, registros, online, pendientes, onNav, onVerPro
 }
 
 // ═══════════════════════════════════════════════════════════════
-// EDITOR DE REGISTRO — editar o eliminar un registro guardado
+// EDITOR DE REGISTRO
 // ═══════════════════════════════════════════════════════════════
 function EditorRegistro({ registro, onGuardar, onEliminar, onVolver }) {
   const cfg = TIPO_CFG[registro.tipo];
@@ -448,7 +518,6 @@ function EditorRegistro({ registro, onGuardar, onEliminar, onVolver }) {
   const [guardado, setGuardado] = useState(false);
 
   const criticos = campos.filter(c => c.nk && checkAlerta(registro.tipo, c.nk, vals[c.id]) === "critico").length;
-
   const guardar = () => {
     const ad = campos.find(c => c.nk && checkAlerta(registro.tipo, c.nk, vals[c.id]) === "critico");
     onGuardar({ ...registro, valores:vals, alerta:ad?{nivel:"critico",campo:ad.label}:null, editado:ahora() });
@@ -456,45 +525,45 @@ function EditorRegistro({ registro, onGuardar, onEliminar, onVolver }) {
   };
 
   if (guardado) return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:`linear-gradient(160deg,${cfg.color}18,${cfg.color}06)`, padding:28, gap:14 }}>
-      <div style={{ width:80, height:80, borderRadius:"50%", background:cfg.bg, border:`3px solid ${cfg.color}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:38 }}>{cfg.icon}</div>
-      <h3 style={{ color:cfg.color, fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:400, textAlign:"center", margin:0 }}>¡Cambios guardados!</h3>
-      {criticos > 0 && <span style={{ background:"#fde8e8", color:"#c0392b", fontFamily:"system-ui", fontSize:12, fontWeight:700, padding:"5px 14px", borderRadius:20 }}>🚨 {criticos} alerta registrada</span>}
-      <button onClick={onVolver} style={{ width:"100%", background:cfg.color, border:"none", borderRadius:14, padding:"14px", color:"white", fontFamily:"system-ui", fontWeight:700, fontSize:14, cursor:"pointer" }}>← Volver</button>
+    <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:T.surface, padding:28, gap:16 }}>
+      <div style={{ width:80, height:80, borderRadius:"50%", background:cfg.bg, border:`3px solid ${cfg.color}33`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:36, animation:"scaleIn 0.3s ease" }}>{cfg.icon}</div>
+      <h3 style={{ color:cfg.color, fontFamily:T.serif, fontSize:28, fontWeight:400, textAlign:"center", margin:0 }}>¡Cambios guardados!</h3>
+      {criticos > 0 && <Badge variant="red">🚨 {criticos} alerta registrada</Badge>}
+      <button onClick={onVolver} className="btn-press" style={{ width:"100%", background:cfg.color, border:"none", borderRadius:14, padding:"14px", color:"white", fontFamily:T.sans, fontWeight:600, fontSize:14, cursor:"pointer" }}>← Volver</button>
     </div>
   );
 
   return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
-      <div style={{ padding:"14px 18px 12px", borderBottom:`1.5px solid ${cfg.bg}`, background:"rgba(255,255,255,0.95)", position:"sticky", top:0, zIndex:10, backdropFilter:"blur(12px)" }}>
-        <button onClick={onVolver} style={{ color:cfg.color, fontFamily:"system-ui", fontSize:12, background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:8 }}>‹ Volver</button>
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:T.surface }}>
+      <div style={{ padding:"14px 18px 12px", borderBottom:`1px solid rgba(45,106,79,0.08)`, background:"rgba(255,255,255,0.97)", position:"sticky", top:0, zIndex:10, backdropFilter:"blur(12px)" }}>
+        <button onClick={onVolver} style={{ color:T.sage, fontFamily:T.sans, fontSize:12, background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:10, fontWeight:500 }}>‹ Volver</button>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <div style={{ width:40, height:40, borderRadius:12, background:cfg.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>{cfg.icon}</div>
+            <IconBox icon={cfg.icon} bg={cfg.bg} size={40} radius={11} fontSize={19}/>
             <div>
-              <p style={{ color:cfg.color, fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.15em", margin:0, opacity:0.7 }}>EDITANDO REGISTRO</p>
-              <p style={{ color:cfg.color, fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, fontWeight:400, margin:0 }}>{cfg.label}</p>
+              <p style={{ color:cfg.color, fontFamily:T.mono, fontSize:8, fontWeight:400, letterSpacing:"0.14em", margin:0, opacity:0.65 }}>EDITANDO REGISTRO</p>
+              <p style={{ color:cfg.color, fontFamily:T.serif, fontSize:17, fontWeight:400, margin:0 }}>{cfg.label}</p>
             </div>
           </div>
-          <button onClick={() => setConfirmDel(true)} style={{ background:"#fde8e8", border:"none", borderRadius:10, padding:"7px 12px", color:"#c0392b", fontFamily:"system-ui", fontSize:11, fontWeight:700, cursor:"pointer" }}>🗑 Eliminar</button>
+          <button onClick={() => setConfirmDel(true)} className="btn-press" style={{ background:T.dangerBg, border:"none", borderRadius:10, padding:"7px 12px", color:T.danger, fontFamily:T.sans, fontSize:11, fontWeight:600, cursor:"pointer" }}>🗑 Eliminar</button>
         </div>
-        <p style={{ color:"#aaa", fontFamily:"system-ui", fontSize:10, margin:"6px 0 0" }}>
-          📅 {registro.timestamp} · 👤 {registro.operador}
-          {registro.editado && <span style={{ color:"#856404" }}> · ✏ Editado: {registro.editado}</span>}
+        <p style={{ color:"#bbb", fontFamily:T.mono, fontSize:9, margin:"8px 0 0", letterSpacing:"0.04em" }}>
+          {registro.timestamp} · {registro.operador}
+          {registro.editado && <span style={{ color:"#a07820" }}> · ✏ {registro.editado}</span>}
         </p>
       </div>
 
       {confirmDel && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
-          <div style={{ background:"white", borderRadius:20, padding:"24px", width:"100%", maxWidth:340, boxShadow:"0 8px 32px rgba(0,0,0,0.2)" }}>
-            <div style={{ textAlign:"center", marginBottom:16 }}>
-              <div style={{ fontSize:40, marginBottom:8 }}>🗑</div>
-              <p style={{ color:"#c0392b", fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22, fontWeight:400, margin:"0 0 6px" }}>¿Eliminar registro?</p>
-              <p style={{ color:"#888", fontFamily:"system-ui", fontSize:12, margin:0 }}>Esta acción no se puede deshacer.</p>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", padding:24, backdropFilter:"blur(4px)" }}>
+          <div style={{ background:"white", borderRadius:22, padding:"28px 24px", width:"100%", maxWidth:340, boxShadow:"0 16px 48px rgba(0,0,0,0.2)", animation:"scaleIn 0.2s ease" }}>
+            <div style={{ textAlign:"center", marginBottom:20 }}>
+              <div style={{ fontSize:36, marginBottom:10 }}>🗑</div>
+              <p style={{ color:T.danger, fontFamily:T.serif, fontSize:22, fontWeight:400, margin:"0 0 6px" }}>¿Eliminar registro?</p>
+              <p style={{ color:"#999", fontFamily:T.sans, fontSize:12, margin:0, fontWeight:400 }}>Esta acción no se puede deshacer.</p>
             </div>
             <div style={{ display:"flex", gap:10 }}>
-              <button onClick={() => setConfirmDel(false)} style={{ flex:1, background:"#f0faf4", border:"1.5px solid rgba(45,106,79,0.2)", borderRadius:12, padding:"12px", color:"#52b788", fontFamily:"system-ui", fontWeight:600, fontSize:13, cursor:"pointer" }}>Cancelar</button>
-              <button onClick={onEliminar} style={{ flex:1, background:"#c0392b", border:"none", borderRadius:12, padding:"12px", color:"white", fontFamily:"system-ui", fontWeight:700, fontSize:13, cursor:"pointer" }}>Sí, eliminar</button>
+              <button onClick={() => setConfirmDel(false)} className="btn-press" style={{ flex:1, background:T.surface, border:`1.5px solid rgba(45,106,79,0.15)`, borderRadius:12, padding:"12px", color:T.moss, fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer" }}>Cancelar</button>
+              <button onClick={onEliminar} className="btn-press" style={{ flex:1, background:T.danger, border:"none", borderRadius:12, padding:"12px", color:"white", fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer" }}>Eliminar</button>
             </div>
           </div>
         </div>
@@ -503,8 +572,8 @@ function EditorRegistro({ registro, onGuardar, onEliminar, onVolver }) {
       <div style={{ flex:1, overflowY:"auto", padding:"14px 16px", display:"flex", flexDirection:"column", gap:10 }}>
         <CamposFormulario tipo={registro.tipo} vals={vals} setVals={setVals}/>
         <div style={{ display:"flex", gap:8, marginTop:4 }}>
-          <button onClick={onVolver} style={{ flex:1, background:"#f0faf4", border:"1.5px solid rgba(45,106,79,0.2)", borderRadius:14, padding:"13px", color:"#52b788", fontFamily:"system-ui", fontWeight:600, fontSize:13, cursor:"pointer" }}>Cancelar</button>
-          <button onClick={guardar} style={{ flex:2, background:`linear-gradient(135deg,${cfg.color},${cfg.color}cc)`, border:"none", borderRadius:14, padding:"13px", color:"white", fontFamily:"system-ui", fontWeight:700, fontSize:14, cursor:"pointer" }}>
+          <button onClick={onVolver} className="btn-press" style={{ flex:1, background:"white", border:`1.5px solid rgba(45,106,79,0.15)`, borderRadius:14, padding:"13px", color:T.moss, fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer" }}>Cancelar</button>
+          <button onClick={guardar} className="btn-press" style={{ flex:2, background:`linear-gradient(135deg,${cfg.color},${cfg.color}cc)`, border:"none", borderRadius:14, padding:"13px", color:"white", fontFamily:T.sans, fontWeight:600, fontSize:14, cursor:"pointer" }}>
             Guardar cambios {criticos>0?"⚠️":"✓"}
           </button>
         </div>
@@ -515,28 +584,28 @@ function EditorRegistro({ registro, onGuardar, onEliminar, onVolver }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// TARJETA DE REGISTRO — expandible, con semáforo y edición
+// TARJETA DE REGISTRO
 // ═══════════════════════════════════════════════════════════════
 function TarjetaRegistro({ r, abierto, onToggle, onEditar }) {
   const cfg = TIPO_CFG[r.tipo];
   const campos = CAMPOS[r.tipo] || [];
   return (
-    <div style={{ background:"white", border:`1.5px solid ${abierto ? cfg.color+"55" : cfg.bg}`, borderRadius:16, overflow:"hidden", boxShadow:abierto?"0 4px 16px rgba(27,67,50,0.10)":"0 2px 8px rgba(27,67,50,0.05)", transition:"box-shadow 0.2s" }}>
+    <div style={{ background:"white", border:`1.5px solid ${abierto ? cfg.color+"44" : "rgba(45,106,79,0.08)"}`, borderRadius:16, overflow:"hidden", boxShadow:abierto?T.shadowMd:T.shadow, transition:"all 0.2s" }}>
       <button onClick={onToggle} style={{ width:"100%", background:"none", border:"none", cursor:"pointer", padding:"12px 14px", textAlign:"left" }}>
         <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
-          <div style={{ width:36, height:36, borderRadius:10, background:cfg.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>{cfg.icon}</div>
+          <IconBox icon={cfg.icon} bg={cfg.bg} size={36} radius={10} fontSize={17}/>
           <div style={{ flex:1 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:5, flexWrap:"wrap", marginBottom:3 }}>
-              <span style={{ background:cfg.bg, color:cfg.color, fontFamily:"system-ui", fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:8 }}>{cfg.label}</span>
-              {r.alerta && <span style={{ background:"#fde8e8", color:"#c0392b", fontFamily:"system-ui", fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:8 }}>🚨 Alerta</span>}
-              {r.editado && <span style={{ background:"#fff3cd", color:"#856404", fontFamily:"system-ui", fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:8 }}>✏ Editado</span>}
-              <span style={{ color:"#ccc", fontFamily:"system-ui", fontSize:10 }}>· {r.timestamp}</span>
+            <div style={{ display:"flex", alignItems:"center", gap:5, flexWrap:"wrap", marginBottom:4 }}>
+              <Badge variant={r.alerta?"red":"green"} small>{cfg.label}</Badge>
+              {r.alerta && <Badge variant="red" small>🚨 Alerta</Badge>}
+              {r.editado && <Badge variant="amber" small>✏ Editado</Badge>}
+              <span style={{ color:"#ccc", fontFamily:T.mono, fontSize:9, marginLeft:2 }}>{r.timestamp}</span>
             </div>
-            <p style={{ color:"#1a1a1a", fontFamily:"system-ui", fontSize:13, margin:"0 0 2px", fontWeight:500 }}>{r.valores?.comunidad||r.valores?.punto||"Sin detalle"}</p>
+            <p style={{ color:"#1a1a1a", fontFamily:T.sans, fontSize:13, margin:"0 0 3px", fontWeight:500 }}>{r.valores?.comunidad||r.valores?.punto||"Sin detalle"}</p>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div style={{ display:"flex", gap:8 }}>
-                <span style={{ color:"#aaa", fontFamily:"system-ui", fontSize:10 }}>👤 {r.operador}</span>
-                <span style={{ color:"#52b788", fontFamily:"system-ui", fontSize:10 }}>✓ Guardado</span>
+              <div style={{ display:"flex", gap:10 }}>
+                <span style={{ color:"#bbb", fontFamily:T.sans, fontSize:10 }}>👤 {r.operador}</span>
+                <span style={{ color:T.sage, fontFamily:T.sans, fontSize:10 }}>✓ Guardado</span>
               </div>
               <span style={{ color:cfg.color, fontSize:14, transition:"transform 0.2s", display:"inline-block", transform:abierto?"rotate(90deg)":"rotate(0deg)" }}>›</span>
             </div>
@@ -545,15 +614,15 @@ function TarjetaRegistro({ r, abierto, onToggle, onEditar }) {
       </button>
 
       {abierto && (
-        <div style={{ borderTop:`1px solid ${cfg.bg}`, padding:"12px 14px", display:"flex", flexDirection:"column", gap:8 }}>
+        <div style={{ borderTop:`1px solid ${cfg.bg}`, padding:"12px 14px", display:"flex", flexDirection:"column", gap:8, animation:"fadeUp 0.2s ease" }}>
           <div style={{ display:"flex", gap:8 }}>
             <div style={{ flex:1, background:cfg.bg, borderRadius:10, padding:"8px 12px" }}>
-              <p style={{ color:cfg.color, fontFamily:"system-ui", fontSize:9, fontWeight:700, margin:"0 0 1px", letterSpacing:"0.1em" }}>📅 FECHA</p>
-              <p style={{ color:cfg.color, fontFamily:"system-ui", fontSize:11, margin:0, fontWeight:600 }}>{r.timestamp}</p>
+              <p style={{ color:cfg.color, fontFamily:T.mono, fontSize:8, fontWeight:400, margin:"0 0 2px", letterSpacing:"0.12em", opacity:0.7 }}>FECHA</p>
+              <p style={{ color:cfg.color, fontFamily:T.sans, fontSize:11, margin:0, fontWeight:500 }}>{r.timestamp}</p>
             </div>
-            <div style={{ flex:1, background:"#f8f8f8", borderRadius:10, padding:"8px 12px" }}>
-              <p style={{ color:"#666", fontFamily:"system-ui", fontSize:9, fontWeight:700, margin:"0 0 1px", letterSpacing:"0.1em" }}>👤 OPERADOR</p>
-              <p style={{ color:"#1a1a1a", fontFamily:"system-ui", fontSize:11, margin:0, fontWeight:600 }}>{r.operador}</p>
+            <div style={{ flex:1, background:T.surface, borderRadius:10, padding:"8px 12px" }}>
+              <p style={{ color:"#999", fontFamily:T.mono, fontSize:8, fontWeight:400, margin:"0 0 2px", letterSpacing:"0.12em" }}>OPERADOR</p>
+              <p style={{ color:"#1a1a1a", fontFamily:T.sans, fontSize:11, margin:0, fontWeight:500 }}>{r.operador}</p>
             </div>
           </div>
 
@@ -564,18 +633,18 @@ function TarjetaRegistro({ r, abierto, onToggle, onEditar }) {
             return (
               <div key={c.id} style={{ background:sem.bg, border:`1px solid ${sem.border}`, borderRadius:10, padding:"8px 12px" }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <p style={{ color:nivel==="critico"?"#c0392b":nivel==="alerta"?"#b7860a":"#888", fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.1em", margin:"0 0 2px" }}>{c.label.toUpperCase()}</p>
-                  {sem.dot && <div style={{ width:8, height:8, borderRadius:"50%", background:sem.dot }}/>}
+                  <p style={{ color:nivel==="critico"?T.danger:nivel==="alerta"?T.warn:"#999", fontFamily:T.mono, fontSize:8, fontWeight:400, letterSpacing:"0.1em", margin:"0 0 2px" }}>{c.label.toUpperCase()}</p>
+                  {sem.dot && <div style={{ width:7, height:7, borderRadius:"50%", background:sem.dot, animation:"pulse 1.5s ease infinite" }}/>}
                 </div>
-                <p style={{ color:nivel==="critico"?"#c0392b":"#1a1a1a", fontFamily:"system-ui", fontSize:14, margin:0, fontWeight:nivel?"700":"400" }}>{r.valores[c.id]}</p>
-                {nivel && norm && <p style={{ color:nivel==="critico"?"#c0392b":"#b7860a", fontFamily:"system-ui", fontSize:9, margin:"3px 0 0", fontWeight:700 }}>{sem.label} · {norm.norma}</p>}
+                <p style={{ color:nivel==="critico"?T.danger:"#1a1a1a", fontFamily:T.sans, fontSize:14, margin:0, fontWeight:nivel?"600":"400" }}>{r.valores[c.id]}</p>
+                {nivel && norm && <p style={{ color:nivel==="critico"?T.danger:T.warn, fontFamily:T.mono, fontSize:9, margin:"3px 0 0" }}>{sem.label} · {norm.norma}</p>}
               </div>
             );
           })}
           {campos.filter(c => r.valores?.[c.id]).length === 0 && (
-            <p style={{ color:"#bbb", fontFamily:"system-ui", fontSize:12, textAlign:"center", margin:"4px 0" }}>Sin datos cargados</p>
+            <p style={{ color:"#ccc", fontFamily:T.sans, fontSize:12, textAlign:"center", margin:"4px 0" }}>Sin datos cargados</p>
           )}
-          <button onClick={onEditar} style={{ width:"100%", background:"rgba(45,106,79,0.07)", border:"1.5px solid rgba(45,106,79,0.18)", borderRadius:12, padding:"10px", color:"#2d6a4f", fontFamily:"system-ui", fontWeight:700, fontSize:13, cursor:"pointer", marginTop:2 }}>
+          <button onClick={onEditar} className="btn-press" style={{ width:"100%", background:T.surface, border:`1.5px solid rgba(45,106,79,0.15)`, borderRadius:12, padding:"10px", color:T.moss, fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer", marginTop:2 }}>
             ✏ Editar este registro
           </button>
         </div>
@@ -608,52 +677,52 @@ function DetalleProyecto({ proyecto, proyectoActivo, registros, onCambiarActivo,
   }
 
   return (
-    <div style={{ flex:1, overflowY:"auto", background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
-      <div style={{ padding:"14px 18px 12px", borderBottom:"1px solid rgba(45,106,79,0.1)", position:"sticky", top:0, background:"rgba(240,250,244,0.96)", backdropFilter:"blur(12px)", zIndex:10 }}>
-        <button onClick={onVolver} style={{ color:"#52b788", fontFamily:"system-ui", fontSize:12, background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:8 }}>‹ Proyectos</button>
-        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
+    <div style={{ flex:1, overflowY:"auto", background:T.surface }}>
+      <div style={{ padding:"14px 18px 12px", borderBottom:`1px solid rgba(45,106,79,0.07)`, position:"sticky", top:0, background:"rgba(244,250,246,0.97)", backdropFilter:"blur(12px)", zIndex:10 }}>
+        <button onClick={onVolver} style={{ color:T.sage, fontFamily:T.sans, fontSize:12, background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:10, fontWeight:500 }}>‹ Proyectos</button>
+        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
           <div style={{ width:44, height:44, borderRadius:13, background:proyecto.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>⛏</div>
           <div style={{ flex:1 }}>
             <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <p style={{ color:"#1b4332", fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:400, margin:0 }}>{proyecto.nombre}</p>
-              {proyecto.id===proyectoActivo.id && <span style={{ background:"#d8f3dc", color:"#2d6a4f", fontFamily:"system-ui", fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:8 }}>✓ Activo</span>}
+              <p style={{ color:T.forest, fontFamily:T.serif, fontSize:18, fontWeight:400, margin:0 }}>{proyecto.nombre}</p>
+              {proyecto.id===proyectoActivo.id && <Badge variant="green">✓ Activo</Badge>}
             </div>
-            <p style={{ color:"#74c69d", fontFamily:"system-ui", fontSize:11, margin:0 }}>{proyecto.cliente} · {proyecto.campaña}</p>
+            <p style={{ color:T.mist, fontFamily:T.sans, fontSize:11, margin:0 }}>{proyecto.cliente} · {proyecto.campaña}</p>
           </div>
         </div>
 
-        <div style={{ display:"flex", gap:8, marginBottom:10 }}>
-          {[["Registros", regs.length, "#1b4332", "#f0faf4"], ["Alertas", alertas, alertas>0?"#c0392b":"#1b4332", alertas>0?"#fde8e8":"white"], ["Tipos", tipos.length, "#1b4332", "white"]].map(([lbl,val,tc,bg]) => (
-            <div key={lbl} style={{ flex:1, background:bg, borderRadius:12, padding:"8px 10px", textAlign:"center", border:`1px solid ${alertas>0&&lbl==="Alertas"?"rgba(192,57,43,0.15)":"rgba(45,106,79,0.08)"}` }}>
-              <p style={{ color:tc, fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22, margin:0 }}>{val}</p>
-              <p style={{ color:tc=="#c0392b"?tc:"#74c69d", fontFamily:"system-ui", fontSize:9, margin:0 }}>{lbl}</p>
+        <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+          {[["Registros", regs.length, T.forest, "white"], ["Alertas", alertas, alertas>0?T.danger:T.forest, alertas>0?T.dangerBg:"white"], ["Tipos", tipos.length, T.forest, "white"]].map(([lbl,val,tc,bg]) => (
+            <div key={lbl} style={{ flex:1, background:bg, borderRadius:12, padding:"9px 10px", textAlign:"center", border:`1px solid ${alertas>0&&lbl==="Alertas"?"rgba(192,57,43,0.15)":"rgba(45,106,79,0.08)"}` }}>
+              <p style={{ color:tc, fontFamily:T.serif, fontSize:22, margin:0 }}>{val}</p>
+              <p style={{ color:tc===T.danger?tc:T.mist, fontFamily:T.mono, fontSize:8, margin:0, letterSpacing:"0.06em" }}>{lbl.toUpperCase()}</p>
             </div>
           ))}
         </div>
 
         <div style={{ display:"flex", gap:8 }}>
-          <button onClick={() => onNuevoRegistro(proyecto)} style={{ flex:2, background:"linear-gradient(135deg,#1b4332,#2d6a4f)", border:"none", borderRadius:12, padding:"10px", color:"white", fontFamily:"system-ui", fontWeight:700, fontSize:12, cursor:"pointer" }}>+ Nuevo registro</button>
+          <button onClick={() => onNuevoRegistro(proyecto)} className="btn-press" style={{ flex:2, background:`linear-gradient(135deg,${T.forest},${T.moss})`, border:"none", borderRadius:12, padding:"10px", color:"white", fontFamily:T.sans, fontWeight:600, fontSize:12, cursor:"pointer" }}>+ Nuevo registro</button>
           {proyecto.id !== proyectoActivo.id && (
-            <button onClick={() => onCambiarActivo(proyecto)} style={{ flex:1, background:"#d8f3dc", border:"none", borderRadius:12, padding:"10px", color:"#2d6a4f", fontFamily:"system-ui", fontWeight:700, fontSize:12, cursor:"pointer" }}>✓ Activar</button>
+            <button onClick={() => onCambiarActivo(proyecto)} className="btn-press" style={{ flex:1, background:T.frost, border:"none", borderRadius:12, padding:"10px", color:T.moss, fontFamily:T.sans, fontWeight:600, fontSize:12, cursor:"pointer" }}>✓ Activar</button>
           )}
-          <button onClick={() => setVista(v => v==="editar"?"registros":"editar")} style={{ flex:1, background:vista==="editar"?"#1b4332":"rgba(45,106,79,0.08)", border:"1px solid rgba(45,106,79,0.15)", borderRadius:12, padding:"10px", color:vista==="editar"?"white":"#52b788", fontFamily:"system-ui", fontWeight:600, fontSize:12, cursor:"pointer" }}>✏ Editar</button>
+          <button onClick={() => setVista(v => v==="editar"?"registros":"editar")} className="btn-press" style={{ flex:1, background:vista==="editar"?T.forest:"rgba(45,106,79,0.07)", border:`1px solid rgba(45,106,79,0.12)`, borderRadius:12, padding:"10px", color:vista==="editar"?"white":T.moss, fontFamily:T.sans, fontWeight:600, fontSize:12, cursor:"pointer" }}>✏ Editar</button>
         </div>
       </div>
 
       <div style={{ padding:"12px 16px", display:"flex", flexDirection:"column", gap:10 }}>
         {vista === "editar" && (
-          <div style={{ background:"white", border:"1.5px solid rgba(45,106,79,0.2)", borderRadius:18, padding:"16px", boxShadow:"0 4px 16px rgba(27,67,50,0.08)" }}>
-            <p style={{ color:"#52b788", fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.15em", margin:"0 0 12px" }}>EDITANDO PROYECTO</p>
+          <div style={{ background:"white", border:`1.5px solid rgba(45,106,79,0.1)`, borderRadius:18, padding:"16px", boxShadow:T.shadow, animation:"scaleIn 0.2s ease" }}>
+            <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, letterSpacing:"0.14em", margin:"0 0 14px" }}>EDITANDO PROYECTO</p>
             {[["NOMBRE","nombre","Ej: Mina Los Andes"],["CLIENTE","cliente","Ej: Minera Patagónica S.A."],["CAMPAÑA","campaña","Ej: Q1 2026"]].map(([lbl,key,ph]) => (
               <div key={key} style={{ marginBottom:10 }}>
-                <p style={{ color:"#2d6a4f", fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.1em", margin:"0 0 5px" }}>{lbl}</p>
+                <p style={{ color:T.moss, fontFamily:T.sans, fontSize:9, fontWeight:600, letterSpacing:"0.1em", margin:"0 0 5px" }}>{lbl}</p>
                 <input value={form[key]||""} onChange={e => setForm(f => ({...f,[key]:e.target.value}))} placeholder={ph}
-                  style={{ width:"100%", background:"#f0faf4", border:`1.5px solid ${form[key]?"rgba(45,106,79,0.3)":"rgba(45,106,79,0.15)"}`, borderRadius:12, padding:"10px 14px", fontFamily:"system-ui", fontSize:14, outline:"none", boxSizing:"border-box", color:"#1a1a1a" }}/>
+                  style={{ width:"100%", background:T.surface, border:`1.5px solid ${form[key]?"rgba(45,106,79,0.3)":"rgba(45,106,79,0.12)"}`, borderRadius:12, padding:"10px 14px", fontFamily:T.sans, fontSize:14, boxSizing:"border-box", color:"#1a1a1a" }}/>
               </div>
             ))}
             <div style={{ display:"flex", gap:8, marginTop:4 }}>
-              <button onClick={() => setVista("registros")} style={{ flex:1, background:"#f0faf4", border:"1.5px solid rgba(45,106,79,0.2)", borderRadius:12, padding:"11px", color:"#52b788", fontFamily:"system-ui", fontWeight:600, fontSize:13, cursor:"pointer" }}>Cancelar</button>
-              <button onClick={guardarEdicion} style={{ flex:2, background:"linear-gradient(135deg,#1b4332,#2d6a4f)", border:"none", borderRadius:12, padding:"11px", color:"white", fontFamily:"system-ui", fontWeight:700, fontSize:13, cursor:"pointer" }}>✓ Guardar cambios</button>
+              <button onClick={() => setVista("registros")} className="btn-press" style={{ flex:1, background:"white", border:`1.5px solid rgba(45,106,79,0.15)`, borderRadius:12, padding:"11px", color:T.moss, fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer" }}>Cancelar</button>
+              <button onClick={guardarEdicion} className="btn-press" style={{ flex:2, background:`linear-gradient(135deg,${T.forest},${T.moss})`, border:"none", borderRadius:12, padding:"11px", color:"white", fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer" }}>✓ Guardar cambios</button>
             </div>
           </div>
         )}
@@ -661,17 +730,15 @@ function DetalleProyecto({ proyecto, proyectoActivo, registros, onCambiarActivo,
         {vista === "registros" && regs.length > 0 && (
           <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:2 }}>
             {[["todos","Todos"],...Object.entries(TIPO_CFG).filter(([k])=>tipos.includes(k)).map(([k,v])=>[k,`${v.icon} ${v.label.split(" ")[0]}`])].map(([id,lbl]) => (
-              <button key={id} onClick={() => setFiltro(id)} style={{ padding:"5px 12px", borderRadius:20, border:"none", cursor:"pointer", background:filtro===id?"#2d6a4f":"rgba(45,106,79,0.08)", color:filtro===id?"white":"#52b788", fontFamily:"system-ui", fontSize:11, fontWeight:600, flexShrink:0 }}>{lbl}</button>
+              <button key={id} onClick={() => setFiltro(id)} className="btn-press" style={{ padding:"5px 12px", borderRadius:20, border:"none", cursor:"pointer", background:filtro===id?T.moss:"rgba(45,106,79,0.07)", color:filtro===id?"white":T.moss, fontFamily:T.sans, fontSize:11, fontWeight:500, flexShrink:0, transition:"all 0.15s" }}>{lbl}</button>
             ))}
           </div>
         )}
 
         {vista === "registros" && (
           filtrados.length === 0
-            ? <div style={{ textAlign:"center", padding:"40px 0" }}><div style={{ fontSize:40, marginBottom:10 }}>📋</div><p style={{ color:"#b7e4c7", fontFamily:"system-ui", fontSize:13 }}>Sin registros todavía</p><p style={{ color:"#ccc", fontFamily:"system-ui", fontSize:11 }}>Tocá "+ Nuevo registro" para empezar</p></div>
-            : filtrados.map(r => (
-                <TarjetaRegistro key={r.id} r={r} abierto={expandido===r.id} onToggle={()=>setExpandido(expandido===r.id?null:r.id)} onEditar={()=>setEditandoReg(r.id)}/>
-              ))
+            ? <div style={{ textAlign:"center", padding:"48px 0" }}><div style={{ fontSize:36, marginBottom:10, opacity:0.4 }}>📋</div><p style={{ color:T.mist, fontFamily:T.sans, fontSize:13, fontWeight:400 }}>Sin registros todavía</p><p style={{ color:"#ccc", fontFamily:T.sans, fontSize:11 }}>Tocá "+ Nuevo registro" para empezar</p></div>
+            : filtrados.map(r => <TarjetaRegistro key={r.id} r={r} abierto={expandido===r.id} onToggle={()=>setExpandido(expandido===r.id?null:r.id)} onEditar={()=>setEditandoReg(r.id)}/>)
         )}
         <div style={{ height:16 }}/>
       </div>
@@ -680,7 +747,7 @@ function DetalleProyecto({ proyecto, proyectoActivo, registros, onCambiarActivo,
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PROYECTOS — multicliente, lista con resumen
+// PROYECTOS
 // ═══════════════════════════════════════════════════════════════
 function Proyectos({ proyectos, proyectoActivo, registros, onCambiarActivo, onActualizar, onEditarRegistro, onEliminarRegistro, onNuevoRegistro, onVolver, onAgregarProyecto }) {
   const [detalle, setDetalle] = useState(null);
@@ -697,14 +764,14 @@ function Proyectos({ proyectos, proyectoActivo, registros, onCambiarActivo, onAc
   );
 
   return (
-    <div style={{ flex:1, overflowY:"auto", background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
-      <div style={{ padding:"14px 18px 12px", borderBottom:"1px solid rgba(45,106,79,0.1)", position:"sticky", top:0, background:"rgba(240,250,244,0.96)", backdropFilter:"blur(12px)", zIndex:10 }}>
-        <button onClick={onVolver} style={{ color:"#52b788", fontFamily:"system-ui", fontSize:12, background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:8 }}>‹ Inicio</button>
-        <p style={{ color:"#52b788", fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.2em", margin:"0 0 2px" }}>MULTICLIENTE</p>
-        <h2 style={{ color:"#1b4332", fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22, fontWeight:400, margin:0 }}>
-          <span style={{ fontStyle:"italic", color:"#2d6a4f" }}>Proyectos</span>
+    <div style={{ flex:1, overflowY:"auto", background:T.surface }}>
+      <div style={{ padding:"14px 18px 12px", borderBottom:`1px solid rgba(45,106,79,0.07)`, position:"sticky", top:0, background:"rgba(244,250,246,0.97)", backdropFilter:"blur(12px)", zIndex:10 }}>
+        <button onClick={onVolver} style={{ color:T.sage, fontFamily:T.sans, fontSize:12, background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:10, fontWeight:500 }}>‹ Inicio</button>
+        <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, letterSpacing:"0.2em", margin:"0 0 2px" }}>MULTICLIENTE</p>
+        <h2 style={{ color:T.forest, fontFamily:T.serif, fontSize:22, fontWeight:400, margin:0 }}>
+          <em style={{ color:T.moss, fontStyle:"italic" }}>Proyectos</em>
         </h2>
-        <p style={{ color:"#74c69d", fontFamily:"system-ui", fontSize:11, margin:"4px 0 0" }}>{proyectos.length} proyecto{proyectos.length!==1?"s":""} · Tocá uno para ver sus registros</p>
+        <p style={{ color:T.mist, fontFamily:T.sans, fontSize:11, margin:"4px 0 0", fontWeight:400 }}>{proyectos.length} proyecto{proyectos.length!==1?"s":""} · Tocá uno para ver sus registros</p>
       </div>
 
       <div style={{ padding:"14px 16px", display:"flex", flexDirection:"column", gap:10 }}>
@@ -712,19 +779,19 @@ function Proyectos({ proyectos, proyectoActivo, registros, onCambiarActivo, onAc
           const regsP = registros.filter(r => r.proyectoId === p.id);
           const alertasP = regsP.filter(r => r.alerta).length;
           return (
-            <button key={p.id} onClick={() => setDetalle(p)} style={{ background:"white", border:`2px solid ${p.id===proyectoActivo.id?"rgba(45,106,79,0.4)":"rgba(45,106,79,0.1)"}`, borderRadius:20, padding:"16px", boxShadow:`0 4px 16px ${p.id===proyectoActivo.id?"rgba(27,67,50,0.12)":"rgba(27,67,50,0.05)"}`, cursor:"pointer", textAlign:"left", width:"100%" }}>
+            <button key={p.id} onClick={() => setDetalle(p)} className="card-hover btn-press" style={{ background:"white", border:`2px solid ${p.id===proyectoActivo.id?"rgba(45,106,79,0.35)":"rgba(45,106,79,0.08)"}`, borderRadius:18, padding:"16px", boxShadow:p.id===proyectoActivo.id?T.shadowMd:T.shadow, cursor:"pointer", textAlign:"left", width:"100%" }}>
               <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                 <div style={{ width:46, height:46, borderRadius:14, background:p.color, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:22 }}>⛏</div>
                 <div style={{ flex:1 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2, flexWrap:"wrap" }}>
-                    <p style={{ color:"#1b4332", fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:16, fontWeight:400, margin:0 }}>{p.nombre}</p>
-                    {p.id===proyectoActivo.id && <span style={{ background:"#d8f3dc", color:"#2d6a4f", fontFamily:"system-ui", fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:8 }}>✓ Activo</span>}
+                  <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3, flexWrap:"wrap" }}>
+                    <p style={{ color:T.forest, fontFamily:T.serif, fontSize:16, fontWeight:400, margin:0 }}>{p.nombre}</p>
+                    {p.id===proyectoActivo.id && <Badge variant="green">✓ Activo</Badge>}
                   </div>
-                  <p style={{ color:"#74c69d", fontFamily:"system-ui", fontSize:11, margin:"0 0 6px" }}>{p.cliente} · {p.campaña}</p>
+                  <p style={{ color:T.mist, fontFamily:T.sans, fontSize:11, margin:"0 0 6px", fontWeight:400 }}>{p.cliente} · {p.campaña}</p>
                   <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                    <span style={{ color:"#52b788", fontFamily:"system-ui", fontSize:11 }}>📋 {regsP.length} registro{regsP.length!==1?"s":""}</span>
-                    {alertasP > 0 && <span style={{ color:"#c0392b", fontFamily:"system-ui", fontSize:11, fontWeight:700 }}>🚨 {alertasP} alerta{alertasP!==1?"s":""}</span>}
-                    <span style={{ color:"#ccc", fontFamily:"system-ui", fontSize:18, marginLeft:"auto" }}>›</span>
+                    <span style={{ color:T.sage, fontFamily:T.sans, fontSize:11 }}>📋 {regsP.length} registro{regsP.length!==1?"s":""}</span>
+                    {alertasP > 0 && <span style={{ color:T.danger, fontFamily:T.sans, fontSize:11, fontWeight:600 }}>🚨 {alertasP} alerta{alertasP!==1?"s":""}</span>}
+                    <span style={{ color:"#ddd", fontFamily:T.sans, fontSize:18, marginLeft:"auto" }}>›</span>
                   </div>
                 </div>
               </div>
@@ -732,30 +799,29 @@ function Proyectos({ proyectos, proyectoActivo, registros, onCambiarActivo, onAc
           );
         })}
 
-        {/* NUEVO PROYECTO */}
         {nuevoForm ? (
-          <div style={{ background:"white", border:"1.5px solid rgba(45,106,79,0.2)", borderRadius:20, padding:"16px", boxShadow:"0 4px 16px rgba(27,67,50,0.08)" }}>
-            <p style={{ color:"#52b788", fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.15em", margin:"0 0 12px" }}>NUEVO PROYECTO</p>
+          <div style={{ background:"white", border:`1.5px solid rgba(45,106,79,0.15)`, borderRadius:18, padding:"16px", boxShadow:T.shadow, animation:"scaleIn 0.2s ease" }}>
+            <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, letterSpacing:"0.14em", margin:"0 0 14px" }}>NUEVO PROYECTO</p>
             {[["NOMBRE","nombre","Ej: EIA Quebrada Honda"],["CLIENTE","cliente","Ej: Empresa SA"],["CAMPAÑA","campaña","Ej: Q2 2026"]].map(([lbl,key,ph]) => (
               <div key={key} style={{ marginBottom:10 }}>
-                <p style={{ color:"#2d6a4f", fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.1em", margin:"0 0 5px" }}>{lbl}</p>
+                <p style={{ color:T.moss, fontFamily:T.sans, fontSize:9, fontWeight:600, letterSpacing:"0.1em", margin:"0 0 5px" }}>{lbl}</p>
                 <input value={nf[key]||""} onChange={e => setNf(f=>({...f,[key]:e.target.value}))} placeholder={ph}
-                  style={{ width:"100%", background:"#f0faf4", border:`1.5px solid ${nf[key]?"rgba(45,106,79,0.3)":"rgba(45,106,79,0.15)"}`, borderRadius:12, padding:"10px 14px", fontFamily:"system-ui", fontSize:14, outline:"none", boxSizing:"border-box", color:"#1a1a1a" }}/>
+                  style={{ width:"100%", background:T.surface, border:`1.5px solid ${nf[key]?"rgba(45,106,79,0.3)":"rgba(45,106,79,0.12)"}`, borderRadius:12, padding:"10px 14px", fontFamily:T.sans, fontSize:14, boxSizing:"border-box", color:"#1a1a1a" }}/>
               </div>
             ))}
-            <p style={{ color:"#2d6a4f", fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.1em", margin:"0 0 8px" }}>COLOR</p>
+            <p style={{ color:T.moss, fontFamily:T.sans, fontSize:9, fontWeight:600, letterSpacing:"0.1em", margin:"0 0 8px" }}>COLOR</p>
             <div style={{ display:"flex", gap:8, marginBottom:14 }}>
               {colores.map(c => (
-                <button key={c} onClick={() => setNf(f=>({...f,color:c}))} style={{ width:32, height:32, borderRadius:"50%", background:c, border:nf.color===c?"3px solid #52b788":"3px solid transparent", cursor:"pointer" }}/>
+                <button key={c} onClick={() => setNf(f=>({...f,color:c}))} className="btn-press" style={{ width:32, height:32, borderRadius:"50%", background:c, border:nf.color===c?"3px solid #52b788":"3px solid transparent", cursor:"pointer", transition:"border 0.15s" }}/>
               ))}
             </div>
             <div style={{ display:"flex", gap:8 }}>
-              <button onClick={() => { setNuevoForm(false); setNf({nombre:"",cliente:"",campaña:"",color:"#1b4332"}); }} style={{ flex:1, background:"#f0faf4", border:"1.5px solid rgba(45,106,79,0.2)", borderRadius:12, padding:"11px", color:"#52b788", fontFamily:"system-ui", fontWeight:600, fontSize:13, cursor:"pointer" }}>Cancelar</button>
-              <button onClick={() => { if(!nf.nombre.trim()) return; onAgregarProyecto(nf); setNuevoForm(false); setNf({nombre:"",cliente:"",campaña:"",color:"#1b4332"}); }} style={{ flex:2, background:"linear-gradient(135deg,#1b4332,#2d6a4f)", border:"none", borderRadius:12, padding:"11px", color:"white", fontFamily:"system-ui", fontWeight:700, fontSize:13, cursor:"pointer" }}>✓ Crear proyecto</button>
+              <button onClick={() => { setNuevoForm(false); setNf({nombre:"",cliente:"",campaña:"",color:"#1b4332"}); }} className="btn-press" style={{ flex:1, background:"white", border:`1.5px solid rgba(45,106,79,0.15)`, borderRadius:12, padding:"11px", color:T.moss, fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer" }}>Cancelar</button>
+              <button onClick={() => { if(!nf.nombre.trim()) return; onAgregarProyecto(nf); setNuevoForm(false); setNf({nombre:"",cliente:"",campaña:"",color:"#1b4332"}); }} className="btn-press" style={{ flex:2, background:`linear-gradient(135deg,${T.forest},${T.moss})`, border:"none", borderRadius:12, padding:"11px", color:"white", fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer" }}>✓ Crear proyecto</button>
             </div>
           </div>
         ) : (
-          <button onClick={() => setNuevoForm(true)} style={{ border:"2px dashed rgba(45,106,79,0.25)", borderRadius:20, padding:"16px", color:"#52b788", fontFamily:"system-ui", fontSize:13, fontWeight:600, background:"none", cursor:"pointer", textAlign:"center" }}>+ Nuevo proyecto</button>
+          <button onClick={() => setNuevoForm(true)} className="btn-press" style={{ border:`2px dashed rgba(45,106,79,0.2)`, borderRadius:18, padding:"16px", color:T.moss, fontFamily:T.sans, fontSize:13, fontWeight:500, background:"none", cursor:"pointer", textAlign:"center", transition:"background 0.15s" }}>+ Nuevo proyecto</button>
         )}
         <div style={{ height:16 }}/>
       </div>
@@ -784,33 +850,33 @@ function Formulario({ tipo, proyecto, user, onGuardar, onBack }) {
   };
 
   if (guardado) return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:`linear-gradient(160deg,${cfg.color}18,${cfg.color}06)`, padding:28, gap:14 }}>
-      <div style={{ width:80, height:80, borderRadius:"50%", background:cfg.bg, border:`3px solid ${cfg.color}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:38 }}>{cfg.icon}</div>
-      <h3 style={{ color:cfg.color, fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:400, textAlign:"center", margin:0 }}>¡Guardado!</h3>
-      {alertas > 0 && <span style={{ background:"#fde8e8", color:"#c0392b", fontFamily:"system-ui", fontSize:12, fontWeight:700, padding:"5px 14px", borderRadius:20 }}>🚨 {alertas} alerta registrada</span>}
-      <div style={{ background:"#d8f3dc", border:"1px solid rgba(45,106,79,0.2)", borderRadius:12, padding:"10px 14px", width:"100%" }}>
-        <p style={{ color:"#2d6a4f", fontFamily:"system-ui", fontSize:11, margin:0, textAlign:"center" }}>✓ Guardado localmente · No se pierde sin conexión</p>
+    <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:T.surface, padding:28, gap:16 }}>
+      <div style={{ width:80, height:80, borderRadius:"50%", background:cfg.bg, border:`3px solid ${cfg.color}33`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:36, animation:"scaleIn 0.3s ease" }}>{cfg.icon}</div>
+      <h3 style={{ color:cfg.color, fontFamily:T.serif, fontSize:28, fontWeight:400, textAlign:"center", margin:0 }}>¡Guardado!</h3>
+      {alertas > 0 && <Badge variant="red">🚨 {alertas} alerta registrada</Badge>}
+      <div style={{ background:T.frost, border:`1px solid rgba(45,106,79,0.15)`, borderRadius:12, padding:"11px 16px", width:"100%" }}>
+        <p style={{ color:T.moss, fontFamily:T.sans, fontSize:11, margin:0, textAlign:"center", fontWeight:500 }}>✓ Guardado localmente · No se pierde sin conexión</p>
       </div>
-      <button onClick={onBack} style={{ width:"100%", background:cfg.color, border:"none", borderRadius:14, padding:"14px", color:"white", fontFamily:"system-ui", fontWeight:700, fontSize:14, cursor:"pointer" }}>← Volver al inicio</button>
-      <button onClick={() => { setVals({}); setGuardado(false); }} style={{ width:"100%", background:cfg.bg, border:"none", borderRadius:14, padding:"12px", color:cfg.color, fontFamily:"system-ui", fontWeight:600, fontSize:13, cursor:"pointer" }}>+ Nuevo registro</button>
+      <button onClick={onBack} className="btn-press" style={{ width:"100%", background:cfg.color, border:"none", borderRadius:14, padding:"14px", color:"white", fontFamily:T.sans, fontWeight:600, fontSize:14, cursor:"pointer" }}>← Volver al inicio</button>
+      <button onClick={() => { setVals({}); setGuardado(false); }} className="btn-press" style={{ width:"100%", background:cfg.bg, border:"none", borderRadius:14, padding:"12px", color:cfg.color, fontFamily:T.sans, fontWeight:500, fontSize:13, cursor:"pointer" }}>+ Nuevo registro</button>
     </div>
   );
 
   return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
-      <div style={{ padding:"14px 18px 12px", borderBottom:`1.5px solid ${cfg.bg}`, background:"rgba(255,255,255,0.9)", position:"sticky", top:0, zIndex:10, backdropFilter:"blur(12px)" }}>
-        <button onClick={onBack} style={{ color:cfg.color, fontFamily:"system-ui", fontSize:12, background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:8 }}>‹ Inicio</button>
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:T.surface }}>
+      <div style={{ padding:"14px 18px 12px", borderBottom:`1.5px solid ${cfg.bg}`, background:"rgba(255,255,255,0.95)", position:"sticky", top:0, zIndex:10, backdropFilter:"blur(12px)" }}>
+        <button onClick={onBack} style={{ color:cfg.color, fontFamily:T.sans, fontSize:12, background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:10, fontWeight:500 }}>‹ Inicio</button>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:40, height:40, borderRadius:12, background:cfg.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>{cfg.icon}</div>
+          <IconBox icon={cfg.icon} bg={cfg.bg} size={40} radius={12} fontSize={19}/>
           <div>
-            <p style={{ color:cfg.color, fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.15em", margin:0, opacity:0.7 }}>{proyecto.nombre}</p>
-            <p style={{ color:cfg.color, fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, fontWeight:400, margin:0 }}>{cfg.label}</p>
+            <p style={{ color:cfg.color, fontFamily:T.mono, fontSize:8, fontWeight:400, letterSpacing:"0.14em", margin:0, opacity:0.65 }}>{proyecto.nombre}</p>
+            <p style={{ color:cfg.color, fontFamily:T.serif, fontSize:17, fontWeight:400, margin:0 }}>{cfg.label}</p>
           </div>
         </div>
       </div>
       <div style={{ flex:1, overflowY:"auto", padding:"14px 16px", display:"flex", flexDirection:"column", gap:10 }}>
         <CamposFormulario tipo={tipo} vals={vals} setVals={setVals}/>
-        <button onClick={guardar} disabled={!reqsOk} style={{ width:"100%", background:reqsOk?`linear-gradient(135deg,${cfg.color},${cfg.color}cc)`:"rgba(45,106,79,0.1)", border:"none", borderRadius:16, padding:"14px", color:reqsOk?"white":"#95d5b2", fontFamily:"system-ui", fontWeight:700, fontSize:14, cursor:reqsOk?"pointer":"default" }}>
+        <button onClick={guardar} disabled={!reqsOk} className={reqsOk?"btn-press":""} style={{ width:"100%", background:reqsOk?`linear-gradient(135deg,${cfg.color},${cfg.color}cc)`:"rgba(45,106,79,0.08)", border:"none", borderRadius:16, padding:"14px", color:reqsOk?"white":T.mist, fontFamily:T.sans, fontWeight:600, fontSize:14, cursor:reqsOk?"pointer":"default", transition:"all 0.2s" }}>
           {reqsOk ? `Guardar registro ${alertas>0?"⚠️":"✓"}` : "Completá los campos obligatorios (*)"}
         </button>
         <div style={{ height:16 }}/>
@@ -838,27 +904,30 @@ function Historial({ registros, proyecto, onEditarRegistro, onEliminarRegistro }
   }
 
   return (
-    <div style={{ flex:1, overflowY:"auto", background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
-      <div style={{ padding:"14px 18px 12px", borderBottom:"1px solid rgba(45,106,79,0.1)", position:"sticky", top:0, background:"rgba(240,250,244,0.96)", backdropFilter:"blur(12px)", zIndex:10 }}>
-        <p style={{ color:"#52b788", fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.2em", margin:"0 0 2px" }}>HISTORIAL · {proyecto.nombre}</p>
-        <h2 style={{ color:"#1b4332", fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22, fontWeight:400, margin:"0 0 10px" }}>
-          Todos los <span style={{ fontStyle:"italic", color:"#2d6a4f" }}>registros</span>
-          {todos.length>0 && <span style={{ color:"#52b788", fontFamily:"system-ui", fontSize:16 }}> · {todos.length}</span>}
+    <div style={{ flex:1, overflowY:"auto", background:T.surface }}>
+      <div style={{ padding:"14px 18px 12px", borderBottom:`1px solid rgba(45,106,79,0.07)`, position:"sticky", top:0, background:"rgba(244,250,246,0.97)", backdropFilter:"blur(12px)", zIndex:10 }}>
+        <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, letterSpacing:"0.2em", margin:"0 0 2px" }}>HISTORIAL · {proyecto.nombre}</p>
+        <h2 style={{ color:T.forest, fontFamily:T.serif, fontSize:22, fontWeight:400, margin:"0 0 10px" }}>
+          Todos los <em style={{ color:T.moss }}>registros</em>
+          {todos.length>0 && <span style={{ color:T.sage, fontFamily:T.sans, fontSize:16 }}> · {todos.length}</span>}
         </h2>
-        <input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="🔍 Buscar en registros…"
-          style={{ width:"100%", background:"white", border:"1.5px solid rgba(45,106,79,0.15)", borderRadius:12, padding:"9px 14px", fontFamily:"system-ui", fontSize:13, outline:"none", boxSizing:"border-box", marginBottom:8 }}/>
+        <div style={{ position:"relative", marginBottom:10 }}>
+          <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:12, opacity:0.4 }}>🔍</span>
+          <input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar en registros…"
+            style={{ width:"100%", background:"white", border:`1.5px solid rgba(45,106,79,0.12)`, borderRadius:12, padding:"9px 14px 9px 34px", fontFamily:T.sans, fontSize:13, boxSizing:"border-box", color:"#1a1a1a" }}/>
+        </div>
         <div style={{ display:"flex", gap:6, overflowX:"auto" }}>
           {[["todos","Todos"],...Object.entries(TIPO_CFG).map(([k,v])=>[k,`${v.icon} ${v.label.split(" ")[0]}`])].map(([id,lbl]) => (
-            <button key={id} onClick={() => setFiltro(id)} style={{ padding:"5px 12px", borderRadius:20, border:"none", cursor:"pointer", background:filtro===id?"#2d6a4f":"rgba(45,106,79,0.08)", color:filtro===id?"white":"#52b788", fontFamily:"system-ui", fontSize:11, fontWeight:600, flexShrink:0 }}>{lbl}</button>
+            <button key={id} onClick={() => setFiltro(id)} className="btn-press" style={{ padding:"5px 12px", borderRadius:20, border:"none", cursor:"pointer", background:filtro===id?T.moss:"rgba(45,106,79,0.07)", color:filtro===id?"white":T.moss, fontFamily:T.sans, fontSize:11, fontWeight:500, flexShrink:0, transition:"all 0.15s" }}>{lbl}</button>
           ))}
         </div>
       </div>
 
       <div style={{ padding:"12px 16px", display:"flex", flexDirection:"column", gap:8 }}>
         {filtrados.length === 0 && (
-          <div style={{ textAlign:"center", padding:"40px 0" }}>
-            <div style={{ fontSize:40, marginBottom:10 }}>📋</div>
-            <p style={{ color:"#b7e4c7", fontFamily:"system-ui", fontSize:13 }}>Sin registros{filtro!=="todos"?" de este tipo":""}</p>
+          <div style={{ textAlign:"center", padding:"48px 0" }}>
+            <div style={{ fontSize:36, marginBottom:10, opacity:0.3 }}>📋</div>
+            <p style={{ color:T.mist, fontFamily:T.sans, fontSize:13, fontWeight:400 }}>Sin registros{filtro!=="todos"?" de este tipo":""}</p>
           </div>
         )}
         {filtrados.map(r => (
@@ -876,37 +945,37 @@ function Historial({ registros, proyecto, onEditarRegistro, onEliminarRegistro }
 function QRCliente({ proyectos }) {
   const [sel, setSel] = useState(null);
   return (
-    <div style={{ flex:1, overflowY:"auto", background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
-      <div style={{ padding:"14px 18px 12px", borderBottom:"1px solid rgba(45,106,79,0.1)" }}>
-        <p style={{ color:"#52b788", fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.2em", margin:"0 0 2px" }}>ACCESO CLIENTE</p>
-        <h2 style={{ color:"#1b4332", fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22, fontWeight:400, margin:0 }}>Dashboard <span style={{ fontStyle:"italic", color:"#2d6a4f" }}>QR</span></h2>
-        <p style={{ color:"#74c69d", fontFamily:"system-ui", fontSize:11, margin:"4px 0 0" }}>El cliente escanea el QR y ve sus datos en tiempo real</p>
+    <div style={{ flex:1, overflowY:"auto", background:T.surface }}>
+      <div style={{ padding:"14px 18px 12px", borderBottom:`1px solid rgba(45,106,79,0.07)` }}>
+        <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, letterSpacing:"0.2em", margin:"0 0 2px" }}>ACCESO CLIENTE</p>
+        <h2 style={{ color:T.forest, fontFamily:T.serif, fontSize:22, fontWeight:400, margin:0 }}>Dashboard <em style={{ color:T.moss }}>QR</em></h2>
+        <p style={{ color:T.mist, fontFamily:T.sans, fontSize:11, margin:"4px 0 0", fontWeight:400 }}>El cliente escanea el QR y ve sus datos en tiempo real</p>
       </div>
       <div style={{ padding:"14px 16px", display:"flex", flexDirection:"column", gap:10 }}>
         {proyectos.map(p => (
-          <div key={p.id} style={{ background:"white", borderRadius:18, overflow:"hidden", boxShadow:"0 2px 12px rgba(27,67,50,0.07)", border:"1.5px solid rgba(45,106,79,0.08)" }}>
+          <div key={p.id} style={{ background:"white", borderRadius:18, overflow:"hidden", boxShadow:T.shadow, border:`1.5px solid rgba(45,106,79,0.07)` }}>
             <div style={{ padding:"14px 16px" }}>
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
                 <div style={{ width:42, height:42, borderRadius:12, background:p.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>⛏</div>
                 <div>
-                  <p style={{ color:"#1b4332", fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:15, margin:0 }}>{p.nombre}</p>
-                  <p style={{ color:"#74c69d", fontFamily:"system-ui", fontSize:11, margin:"2px 0 0" }}>{p.cliente}</p>
+                  <p style={{ color:T.forest, fontFamily:T.serif, fontSize:15, margin:0 }}>{p.nombre}</p>
+                  <p style={{ color:T.mist, fontFamily:T.sans, fontSize:11, margin:"2px 0 0", fontWeight:400 }}>{p.cliente}</p>
                 </div>
               </div>
-              <button onClick={() => setSel(sel===p.id?null:p.id)} style={{ width:"100%", background:sel===p.id?"#f0faf4":p.color, border:"none", borderRadius:12, padding:"10px", color:sel===p.id?p.color:"white", fontFamily:"system-ui", fontWeight:700, fontSize:13, cursor:"pointer" }}>
+              <button onClick={() => setSel(sel===p.id?null:p.id)} className="btn-press" style={{ width:"100%", background:sel===p.id?T.surface:p.color, border:sel===p.id?`1px solid rgba(45,106,79,0.15)`:"none", borderRadius:12, padding:"10px", color:sel===p.id?p.color:"white", fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer", transition:"all 0.2s" }}>
                 {sel===p.id ? "Ocultar QR" : "📱 Mostrar QR para cliente"}
               </button>
             </div>
             {sel===p.id && (
-              <div style={{ padding:"16px", borderTop:"1px solid rgba(45,106,79,0.08)", background:"#f9fffe", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-                <div style={{ width:150, height:150, background:"white", borderRadius:12, padding:10, boxShadow:"0 4px 16px rgba(0,0,0,0.1)", display:"grid", gridTemplateColumns:"repeat(10,1fr)", gap:1.5 }}>
+              <div style={{ padding:"16px", borderTop:`1px solid rgba(45,106,79,0.07)`, background:T.surface, display:"flex", flexDirection:"column", alignItems:"center", gap:12, animation:"fadeUp 0.2s ease" }}>
+                <div style={{ width:150, height:150, background:"white", borderRadius:14, padding:10, boxShadow:T.shadowMd, display:"grid", gridTemplateColumns:"repeat(10,1fr)", gap:1.5 }}>
                   {Array.from({length:100}).map((_,i) => { const c=(i<30&&i%10<3)||(i<30&&i%10>6)||(i>69&&i%10<3); const r=((i*7+p.id*13)%3===0); return <div key={i} style={{ background:c||r?p.color:"transparent", borderRadius:1 }}/>; })}
                 </div>
-                <p style={{ color:"#1b4332", fontFamily:"system-ui", fontSize:11, fontWeight:600, margin:0, textAlign:"center" }}>andina.app/{p.nombre.toLowerCase().replace(/ /g,"-")}</p>
-                <p style={{ color:"#74c69d", fontFamily:"system-ui", fontSize:10, margin:0, textAlign:"center" }}>Solo lectura · Sin acceso al sistema interno</p>
+                <p style={{ color:T.forest, fontFamily:T.mono, fontSize:11, margin:0, textAlign:"center" }}>andina.app/{p.nombre.toLowerCase().replace(/ /g,"-")}</p>
+                <p style={{ color:T.mist, fontFamily:T.sans, fontSize:10, margin:0, textAlign:"center", fontWeight:400 }}>Solo lectura · Sin acceso al sistema interno</p>
                 <div style={{ display:"flex", gap:8, width:"100%" }}>
-                  <button style={{ flex:1, background:"#d8f3dc", border:"none", borderRadius:10, padding:"9px", color:"#2d6a4f", fontFamily:"system-ui", fontWeight:600, fontSize:12, cursor:"pointer" }}>📤 Compartir</button>
-                  <button style={{ flex:1, background:"#d8f3dc", border:"none", borderRadius:10, padding:"9px", color:"#2d6a4f", fontFamily:"system-ui", fontWeight:600, fontSize:12, cursor:"pointer" }}>🔄 Renovar</button>
+                  <button className="btn-press" style={{ flex:1, background:T.frost, border:"none", borderRadius:10, padding:"9px", color:T.moss, fontFamily:T.sans, fontWeight:600, fontSize:12, cursor:"pointer" }}>📤 Compartir</button>
+                  <button className="btn-press" style={{ flex:1, background:T.frost, border:"none", borderRadius:10, padding:"9px", color:T.moss, fontFamily:T.sans, fontWeight:600, fontSize:12, cursor:"pointer" }}>🔄 Renovar</button>
                 </div>
               </div>
             )}
@@ -919,7 +988,7 @@ function QRCliente({ proyectos }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PLANTILLAS / VERSIONADO
+// PLANTILLAS
 // ═══════════════════════════════════════════════════════════════
 const PLANTILLAS_DEF = [
   { id:1, nombre:"Relevamiento inicial", comunidad:"Los Molles",  version:1, bloqueado:true,  usos:24, modificado:"10/03/2026" },
@@ -932,58 +1001,58 @@ function Formularios() {
   const form = sel ? plantillas.find(f => f.id===sel) : null;
   const upd = ps => { setPlantillas(ps); save("plantillas", ps); };
   return (
-    <div style={{ flex:1, overflowY:"auto", background:"linear-gradient(160deg,#f0faf4,#e8f5e9)" }}>
-      <div style={{ padding:"14px 18px 12px", borderBottom:"1px solid rgba(45,106,79,0.1)", position:"sticky", top:0, background:"rgba(240,250,244,0.96)", backdropFilter:"blur(12px)", zIndex:10 }}>
-        {sel && <button onClick={() => setSel(null)} style={{ color:"#52b788", fontFamily:"system-ui", fontSize:12, background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:8 }}>‹ Plantillas</button>}
-        <p style={{ color:"#52b788", fontFamily:"system-ui", fontSize:9, fontWeight:700, letterSpacing:"0.2em", margin:"0 0 2px" }}>VERSIONADO</p>
-        <h2 style={{ color:"#1b4332", fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22, fontWeight:400, margin:0 }}>
-          {sel ? form.nombre : <>Formularios <span style={{ fontStyle:"italic", color:"#2d6a4f" }}>y plantillas</span></>}
+    <div style={{ flex:1, overflowY:"auto", background:T.surface }}>
+      <div style={{ padding:"14px 18px 12px", borderBottom:`1px solid rgba(45,106,79,0.07)`, position:"sticky", top:0, background:"rgba(244,250,246,0.97)", backdropFilter:"blur(12px)", zIndex:10 }}>
+        {sel && <button onClick={() => setSel(null)} style={{ color:T.sage, fontFamily:T.sans, fontSize:12, background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:10, fontWeight:500 }}>‹ Plantillas</button>}
+        <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, letterSpacing:"0.2em", margin:"0 0 2px" }}>VERSIONADO</p>
+        <h2 style={{ color:T.forest, fontFamily:T.serif, fontSize:22, fontWeight:400, margin:0 }}>
+          {sel ? form.nombre : <>Formularios <em style={{ color:T.moss }}>y plantillas</em></>}
         </h2>
       </div>
       <div style={{ padding:"14px 16px", display:"flex", flexDirection:"column", gap:10 }}>
         {!sel ? (
           <>
-            <div style={{ background:"linear-gradient(135deg,#1b4332,#2d6a4f)", borderRadius:16, padding:"13px 16px" }}>
-              <p style={{ color:"rgba(255,255,255,0.65)", fontFamily:"system-ui", fontSize:11, margin:0, lineHeight:1.6 }}>🔒 Los formularios bloqueados no se pueden modificar durante una campaña activa.</p>
+            <div style={{ background:`linear-gradient(135deg,${T.forest},${T.moss})`, borderRadius:16, padding:"13px 16px" }}>
+              <p style={{ color:"rgba(255,255,255,0.6)", fontFamily:T.sans, fontSize:11, margin:0, lineHeight:1.6, fontWeight:400 }}>🔒 Los formularios bloqueados no se pueden modificar durante una campaña activa.</p>
             </div>
             {plantillas.map(f => (
-              <button key={f.id} onClick={() => setSel(f.id)} style={{ background:"white", border:`1.5px solid ${f.bloqueado?"#d0e8f5":"rgba(45,106,79,0.1)"}`, borderRadius:18, padding:"14px 16px", cursor:"pointer", textAlign:"left", boxShadow:"0 3px 12px rgba(27,67,50,0.06)" }}>
+              <button key={f.id} onClick={() => setSel(f.id)} className="card-hover btn-press" style={{ background:"white", border:`1.5px solid ${f.bloqueado?"rgba(30,96,145,0.2)":"rgba(45,106,79,0.08)"}`, borderRadius:18, padding:"14px 16px", cursor:"pointer", textAlign:"left", boxShadow:T.shadow }}>
                 <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                  <div style={{ width:42, height:42, borderRadius:12, background:f.bloqueado?"#d0e8f5":"#d8f3dc", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>📝</div>
+                  <IconBox icon="📝" bg={f.bloqueado?"#d0e8f5":"#d8f3dc"} size={42} radius={12} fontSize={18}/>
                   <div style={{ flex:1 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", marginBottom:3 }}>
-                      <span style={{ color:"#1b4332", fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:15 }}>{f.nombre}</span>
-                      <span style={{ background:f.bloqueado?"#d0e8f5":"#d8f3dc", color:f.bloqueado?"#1e6091":"#2d6a4f", fontFamily:"system-ui", fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:8 }}>{f.bloqueado?"🔒 Bloqueado":"✅ Activo"}</span>
-                      <span style={{ background:"#f0faf4", color:"#52b788", fontFamily:"system-ui", fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:8 }}>v{f.version}</span>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", marginBottom:4 }}>
+                      <span style={{ color:T.forest, fontFamily:T.serif, fontSize:15 }}>{f.nombre}</span>
+                      <Badge variant={f.bloqueado?"blue":"green"} small>{f.bloqueado?"🔒 Bloqueado":"✅ Activo"}</Badge>
+                      <Badge variant="slate" small>v{f.version}</Badge>
                     </div>
-                    <p style={{ color:"#888", fontFamily:"system-ui", fontSize:11, margin:0 }}>📍 {f.comunidad} · {f.usos} usos · {f.modificado}</p>
+                    <p style={{ color:"#bbb", fontFamily:T.sans, fontSize:11, margin:0, fontWeight:400 }}>📍 {f.comunidad} · {f.usos} usos · {f.modificado}</p>
                   </div>
-                  <span style={{ color:"#b7e4c7", fontSize:18 }}>›</span>
+                  <span style={{ color:T.mist, fontSize:18 }}>›</span>
                 </div>
               </button>
             ))}
-            <button style={{ border:"2px dashed rgba(45,106,79,0.2)", borderRadius:16, padding:"14px", color:"#52b788", fontFamily:"system-ui", fontSize:13, fontWeight:600, background:"none", cursor:"pointer", textAlign:"center" }}>+ Nueva plantilla</button>
+            <button className="btn-press" style={{ border:`2px dashed rgba(45,106,79,0.2)`, borderRadius:16, padding:"14px", color:T.moss, fontFamily:T.sans, fontSize:13, fontWeight:500, background:"none", cursor:"pointer", textAlign:"center" }}>+ Nueva plantilla</button>
           </>
         ) : (
-          <div style={{ background:"white", borderRadius:18, padding:"16px", border:"1.5px solid rgba(45,106,79,0.1)" }}>
+          <div style={{ background:"white", borderRadius:18, padding:"16px", border:`1.5px solid rgba(45,106,79,0.08)`, boxShadow:T.shadow }}>
             <div style={{ display:"flex", gap:10, marginBottom:12 }}>
-              <div style={{ flex:1, background:"#f0faf4", borderRadius:12, padding:"10px", textAlign:"center" }}>
-                <p style={{ color:"#1b4332", fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:26, margin:0 }}>v{form.version}</p>
-                <p style={{ color:"#74c69d", fontFamily:"system-ui", fontSize:10, margin:"2px 0 0" }}>Versión</p>
+              <div style={{ flex:1, background:T.surface, borderRadius:12, padding:"10px", textAlign:"center", border:`1px solid rgba(45,106,79,0.08)` }}>
+                <p style={{ color:T.forest, fontFamily:T.serif, fontSize:26, margin:0 }}>v{form.version}</p>
+                <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, margin:"2px 0 0", letterSpacing:"0.08em" }}>VERSIÓN</p>
               </div>
-              <div style={{ flex:1, background:form.bloqueado?"#d0e8f5":"#d8f3dc", borderRadius:12, padding:"10px", textAlign:"center" }}>
-                <p style={{ color:form.bloqueado?"#1e6091":"#2d6a4f", fontFamily:"system-ui", fontSize:13, fontWeight:700, margin:0 }}>{form.bloqueado?"🔒 Bloqueado":"✅ Activo"}</p>
+              <div style={{ flex:1, background:form.bloqueado?"#d0e8f5":T.frost, borderRadius:12, padding:"10px", textAlign:"center", border:`1px solid ${form.bloqueado?"rgba(30,96,145,0.15)":"rgba(45,106,79,0.1)"}` }}>
+                <p style={{ color:form.bloqueado?"#1e6091":T.moss, fontFamily:T.sans, fontSize:13, fontWeight:700, margin:0 }}>{form.bloqueado?"🔒 Bloqueado":"✅ Activo"}</p>
               </div>
             </div>
-            <div style={{ background:"#f8f8f8", borderRadius:12, padding:"12px", marginBottom:12 }}>
-              <p style={{ color:"#888", fontFamily:"system-ui", fontSize:10, fontWeight:700, letterSpacing:"0.1em", margin:"0 0 4px" }}>DETALLES</p>
-              <p style={{ color:"#1a1a1a", fontFamily:"system-ui", fontSize:13, margin:"0 0 2px" }}>📍 Comunidad: <strong>{form.comunidad}</strong></p>
-              <p style={{ color:"#1a1a1a", fontFamily:"system-ui", fontSize:13, margin:"0 0 2px" }}>📋 Usos: <strong>{form.usos}</strong></p>
-              <p style={{ color:"#1a1a1a", fontFamily:"system-ui", fontSize:13, margin:0 }}>📅 Modificado: <strong>{form.modificado}</strong></p>
+            <div style={{ background:T.surface, borderRadius:12, padding:"12px", marginBottom:12, border:`1px solid rgba(45,106,79,0.07)` }}>
+              <p style={{ color:T.mist, fontFamily:T.mono, fontSize:9, letterSpacing:"0.1em", margin:"0 0 6px" }}>DETALLES</p>
+              <p style={{ color:"#1a1a1a", fontFamily:T.sans, fontSize:13, margin:"0 0 3px" }}>📍 Comunidad: <strong style={{ fontWeight:600 }}>{form.comunidad}</strong></p>
+              <p style={{ color:"#1a1a1a", fontFamily:T.sans, fontSize:13, margin:"0 0 3px" }}>📋 Usos: <strong style={{ fontWeight:600 }}>{form.usos}</strong></p>
+              <p style={{ color:"#1a1a1a", fontFamily:T.sans, fontSize:13, margin:0 }}>📅 Modificado: <strong style={{ fontWeight:600 }}>{form.modificado}</strong></p>
             </div>
             {form.bloqueado
-              ? <button onClick={() => upd(plantillas.map(p=>p.id===form.id?{...p,bloqueado:false}:p))} style={{ width:"100%", background:"#f0faf4", border:"1.5px solid rgba(45,106,79,0.2)", borderRadius:12, padding:"11px", color:"#2d6a4f", fontFamily:"system-ui", fontWeight:600, fontSize:13, cursor:"pointer" }}>🔓 Desbloquear</button>
-              : <button onClick={() => upd(plantillas.map(p=>p.id===form.id?{...p,bloqueado:true}:p))} style={{ width:"100%", background:"#1e6091", border:"none", borderRadius:12, padding:"11px", color:"white", fontFamily:"system-ui", fontWeight:700, fontSize:13, cursor:"pointer" }}>🔒 Bloquear para campaña activa</button>
+              ? <button onClick={() => upd(plantillas.map(p=>p.id===form.id?{...p,bloqueado:false}:p))} className="btn-press" style={{ width:"100%", background:T.surface, border:`1.5px solid rgba(45,106,79,0.15)`, borderRadius:12, padding:"11px", color:T.moss, fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer" }}>🔓 Desbloquear</button>
+              : <button onClick={() => upd(plantillas.map(p=>p.id===form.id?{...p,bloqueado:true}:p))} className="btn-press" style={{ width:"100%", background:"#1e6091", border:"none", borderRadius:12, padding:"11px", color:"white", fontFamily:T.sans, fontWeight:600, fontSize:13, cursor:"pointer" }}>🔒 Bloquear para campaña activa</button>
             }
           </div>
         )}
@@ -1003,7 +1072,6 @@ export default function App() {
   const [tipoForm,   setTipoForm]   = useState(null);
   const [pendientes, setPendientes] = useState(0);
 
-  // ── DETECCIÓN REAL DE CONEXIÓN ──────────────────────────────
   const [online, setOnline] = useState(navigator.onLine);
   useEffect(() => {
     const goOn  = () => setOnline(true);
@@ -1013,7 +1081,6 @@ export default function App() {
     return () => { window.removeEventListener("online",goOn); window.removeEventListener("offline",goOff); };
   }, []);
 
-  // ── PROYECTOS ───────────────────────────────────────────────
   const [proyectos, setProyectos] = useState(() => load("proyectos", PROYECTOS_DEF));
   const [proyecto,  setProyecto]  = useState(() => {
     const ps = load("proyectos", PROYECTOS_DEF);
@@ -1033,14 +1100,11 @@ export default function App() {
     setProyectos(n); save("proyectos", n);
   };
 
-  // ── REGISTROS ───────────────────────────────────────────────
   const [registros, setRegistros] = useState(() => load("registros", []));
   const addRegistro    = r => { const n=[{...r,id:Date.now()},...registros]; setRegistros(n); save("registros",n); if(!online) setPendientes(p=>p+1); };
   const editRegistro   = r => { const n=registros.map(x=>x.id===r.id?r:x); setRegistros(n); save("registros",n); };
   const deleteRegistro = id => { const n=registros.filter(x=>x.id!==id); setRegistros(n); save("registros",n); };
   const sincronizar    = () => { const s=registros.map(r=>({...r,sincronizado:true})); setRegistros(s); save("registros",s); setPendientes(0); };
-
-  // ── EXPORTAR CSV ────────────────────────────────────────────
   const exportar = () => exportarCSV(registros, proyectos);
 
   const hoyCount = proyecto ? registros.filter(r => r.proyectoId===proyecto.id).length : 0;
@@ -1063,22 +1127,32 @@ export default function App() {
     return <Inicio user={user} proyecto={proyecto} registros={registros} online={online} pendientes={pendientes} onNav={tipo=>{ setTipoForm(tipo); setTab("form"); }} onVerProyectos={()=>setTab("proyectos")} onSincronizar={sincronizar} onExportar={exportar}/>;
   };
 
+  // NAV items
+  const NAV_ITEMS = [
+    { id:"inicio",      icon:"⊞",  label:"Inicio" },
+    { id:"formularios", icon:"📝", label:"Plantillas" },
+    { fab:true },
+    { id:"qr",          icon:"📱", label:"QR" },
+    { id:"historial",   icon:"☰",  label:"Historial", badge:hoyCount },
+  ];
+
   return (
-    <div style={{ width:"100%", height:"100vh", display:"flex", flexDirection:"column", overflow:"hidden", position:"relative" }}>
+    <div style={{ width:"100%", height:"100vh", display:"flex", flexDirection:"column", overflow:"hidden", position:"relative", fontFamily:T.sans }}>
+      <style>{GLOBAL_CSS}</style>
+      
       {screen==="splash" && <Splash onDone={() => setScreen("login")}/>}
 
-      {/* BARRA DE ESTADO */}
+      {/* STATUS BAR */}
       {screen!=="splash" && (
-        <div style={{ height:28, background:"rgba(0,0,0,0.22)", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 16px", flexShrink:0 }}>
-          <span style={{ color:"rgba(255,255,255,0.65)", fontFamily:"system-ui", fontSize:10, fontWeight:600 }}>{horaCorta()}</span>
+        <div style={{ height:30, background:T.forest, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 18px", flexShrink:0 }}>
+          <span style={{ color:"rgba(255,255,255,0.4)", fontFamily:T.mono, fontSize:10, letterSpacing:"0.06em" }}>{horaCorta()}</span>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             {pendientes > 0 && (
-              <span style={{ background:"#e6a817", color:"white", fontFamily:"system-ui", fontSize:9, fontWeight:700, padding:"1px 7px", borderRadius:8 }}>{pendientes} pend.</span>
+              <span style={{ background:"rgba(198,124,26,0.8)", color:"white", fontFamily:T.sans, fontSize:9, fontWeight:600, padding:"1px 8px", borderRadius:8 }}>{pendientes} pend.</span>
             )}
-            {/* INDICADOR REAL DE CONEXIÓN */}
-            <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-              <div style={{ width:6, height:6, borderRadius:"50%", background:online?"#52b788":"#e07070", boxShadow:online?"0 0 6px #52b788":"0 0 6px #e07070" }}/>
-              <span style={{ color:online?"#52b788":"#e07070", fontFamily:"system-ui", fontSize:10, fontWeight:600 }}>{online?"En línea":"Sin conexión"}</span>
+            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+              <div style={{ width:5, height:5, borderRadius:"50%", background:online?"#52b788":"#e07070", boxShadow:online?"0 0 6px #52b78888":"0 0 6px #e0707088" }}/>
+              <span style={{ color:online?"#52b788":"#e07070", fontFamily:T.mono, fontSize:9, letterSpacing:"0.04em" }}>{online?"En línea":"Sin conexión"}</span>
             </div>
           </div>
         </div>
@@ -1086,20 +1160,20 @@ export default function App() {
 
       <div style={{ flex:1, overflow:"hidden", display:"flex", flexDirection:"column" }}>{renderContent()}</div>
 
-      {/* NAV BAR */}
+      {/* NAV BAR — rediseñada */}
       {screen==="app" && tab!=="form" && tab!=="proyectos" && (
-        <div style={{ height:64, background:"white", borderTop:"1px solid rgba(45,106,79,0.1)", display:"flex", alignItems:"center", justifyContent:"space-around", flexShrink:0, boxShadow:"0 -4px 20px rgba(27,67,50,0.08)" }}>
-          {[{id:"inicio",icon:"⊞",label:"Inicio"},{id:"formularios",icon:"📝",label:"Plantillas"},{fab:true},{id:"qr",icon:"📱",label:"QR"},{id:"historial",icon:"☰",label:"Historial",badge:hoyCount}].map((t,i) =>
+        <div style={{ height:66, background:"white", borderTop:`1px solid rgba(45,106,79,0.07)`, display:"flex", alignItems:"center", justifyContent:"space-around", flexShrink:0, boxShadow:"0 -6px 24px rgba(13,40,24,0.07)" }}>
+          {NAV_ITEMS.map((t, i) =>
             t.fab ? (
-              <button key="fab" onClick={() => setTab("inicio")} style={{ width:52, height:52, borderRadius:"50%", background:"linear-gradient(135deg,#2d6a4f,#52b788)", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", marginTop:-20, boxShadow:"0 4px 16px rgba(27,67,50,0.35)", flex:1 }}>
-                <span style={{ fontSize:26, color:"white" }}>+</span>
+              <button key="fab" onClick={() => setTab("inicio")} className="btn-press" style={{ width:52, height:52, borderRadius:"50%", background:`linear-gradient(135deg,${T.moss},${T.forest})`, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", marginTop:-22, boxShadow:`0 6px 20px rgba(27,67,50,0.32)`, flex:1 }}>
+                <span style={{ fontSize:24, color:"white", lineHeight:1 }}>+</span>
               </button>
             ) : (
-              <button key={t.id} onClick={() => setTab(t.id)} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:2, flex:1, position:"relative" }}>
-                <span style={{ fontSize:tab===t.id?19:15, color:tab===t.id?"#2d6a4f":"#bbb", transition:"all 0.2s" }}>{t.icon}</span>
-                <span style={{ fontFamily:"system-ui", fontSize:9, color:tab===t.id?"#2d6a4f":"#bbb", fontWeight:tab===t.id?700:400 }}>{t.label}</span>
-                {tab===t.id && <div style={{ width:18, height:2.5, background:"#2d6a4f", borderRadius:2 }}/>}
-                {t.badge>0 && <div style={{ position:"absolute", top:-2, right:4, width:16, height:16, borderRadius:"50%", background:"#52b788", display:"flex", alignItems:"center", justifyContent:"center" }}><span style={{ color:"white", fontFamily:"system-ui", fontSize:9, fontWeight:700 }}>{t.badge}</span></div>}
+              <button key={t.id} onClick={() => setTab(t.id)} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3, flex:1, position:"relative", paddingBottom:2 }}>
+                <span style={{ fontSize:tab===t.id?18:15, transition:"all 0.2s", filter:tab===t.id?"none":"grayscale(0.4) opacity(0.45)" }}>{t.icon}</span>
+                <span style={{ fontFamily:T.mono, fontSize:8, color:tab===t.id?T.moss:"#ccc", fontWeight:tab===t.id?400:300, letterSpacing:"0.04em", transition:"color 0.2s" }}>{t.label}</span>
+                {tab===t.id && <div style={{ width:16, height:2, background:T.sage, borderRadius:2, position:"absolute", bottom:0 }}/>}
+                {t.badge>0 && <div style={{ position:"absolute", top:0, right:8, width:15, height:15, borderRadius:"50%", background:T.sage, display:"flex", alignItems:"center", justifyContent:"center" }}><span style={{ color:"white", fontFamily:T.mono, fontSize:8 }}>{t.badge}</span></div>}
               </button>
             )
           )}
